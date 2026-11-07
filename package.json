@@ -1,0 +1,15 @@
+{
+  "name": "lift-belt",
+  "private": true,
+  "version": "0.1.0",
+  "description": "เข็มขัดเตือนมุมก้มลำตัวขณะยกของ — ต้นแบบเพื่อสร้างความตระหนักรู้ ไม่ใช่อุปกรณ์ทางการแพทย์ — static multi-page site; Tailwind is precompiled (run `npm run build:css` after changing classes).",
+  "scripts": {
+    "build:css": "tailwindcss -i ./css/tailwind-input.css -o ./css/tailwind.css --minify",
+    "watch:css": "tailwindcss -i ./css/tailwind-input.css -o ./css/tailwind.css --watch",
+    "test": "node --check js/app.js 2>/dev/null; echo ok",
+    "serve": "npx --yes http-server -p 5500 -c-1 ."
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}

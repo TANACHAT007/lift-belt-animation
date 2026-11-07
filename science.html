@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>หลักการ & ซอฟต์แวร์ – Lift Belt</title>
+  <meta name="description" content="เข็มขัดเตือนมุมก้มลำตัวขณะยกของ — ต้นแบบเพื่อสร้างความตระหนักรู้ ไม่ใช่อุปกรณ์ทางการแพทย์" />
+  <meta name="theme-color" content="#0ea5e9" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Lift Belt" />
+  <meta property="og:description" content="เข็มขัดเตือนมุมก้มลำตัวขณะยกของ — ต้นแบบเพื่อสร้างความตระหนักรู้ ไม่ใช่อุปกรณ์ทางการแพทย์" />
+  <meta property="og:locale" content="th_TH" />
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="css/tailwind.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- THEME:FONTS:START ocean -->
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- THEME:FONTS:END -->
+  <script>try { if (localStorage.getItem("lift-belt-theme") === "dark") document.documentElement.classList.add("dark"); } catch (e) {}</script>
+  <style>
+    .reveal { opacity: 0; transform: translateY(28px); transition: all .7s cubic-bezier(.16,1,.3,1); }
+    .reveal.show { opacity: 1; transform: none; }
+    .bars > div { transform-origin: bottom; animation: grow 1.1s .3s cubic-bezier(.2,.8,.2,1) both; }
+    .bars > div:nth-child(2) { animation-delay: .38s } .bars > div:nth-child(3) { animation-delay: .46s }
+    .bars > div:nth-child(4) { animation-delay: .54s } .bars > div:nth-child(5) { animation-delay: .62s }
+    .bars > div:nth-child(6) { animation-delay: .7s }  .bars > div:nth-child(7) { animation-delay: .78s }
+    @keyframes grow { from { transform: scaleY(0); } }
+    @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; } .bars > div { animation: none; } }
+  </style>
+<style>
+.lb h2{font-size:1.9rem;font-weight:800;margin:.2rem 0 .4rem}.lb h3{font-size:1.15rem;font-weight:700;margin:1.6rem 0 .4rem}
+.lb p,.lb li{line-height:1.8}.lb .lead{font-size:1.1rem;color:#475569;max-width:46rem}.lb .mut{color:#64748b;font-size:.9rem}
+.lb .grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));margin-top:1rem}
+.lb .card{background:#fff;border:1px solid #e2e8f0;border-radius:1rem;padding:1.1rem}.lb .card h3{margin-top:0}
+.lb .big{font-size:2.2rem;font-weight:800;line-height:1.1}
+.lb .note{border-left:4px solid #f59e0b;background:#fffbeb;color:#78350f;padding:.8rem 1rem;border-radius:.6rem;margin:1rem 0}
+.lb .note.bad{border-color:#f43f5e;background:#fff1f2;color:#881337}
+.lb table{width:100%;border-collapse:collapse;font-size:.9rem;margin-top:.6rem}.lb th,.lb td{border-bottom:1px solid #e2e8f0;padding:.5rem .6rem;text-align:left;vertical-align:top}.lb th{color:#64748b;font-weight:600}
+.lb pre{background:#0f172a;color:#e2e8f0;border-radius:.8rem;padding:1rem;overflow:auto;font-size:.85rem;line-height:1.6}.lb code{background:#e2e8f0;color:#0f172a;padding:1px 6px;border-radius:6px;font-size:.85em}
+.lb ul{list-style:disc;padding-left:1.4rem}.lb ol.refs{list-style:decimal;padding-left:1.4rem}.lb ol.refs li{margin:.8rem 0}
+.lb .badge{display:inline-block;font-size:.72rem;padding:0 .5rem;border-radius:99px;border:1px solid #cbd5e1;color:#64748b;white-space:nowrap}
+.lb .v-ok{color:#047857;border-color:#6ee7b7}.lb .v-no{color:#b45309;border-color:#fcd34d}
+.lb .btns{display:flex;gap:.6rem;flex-wrap:wrap;margin:1rem 0}.lb .btn{display:inline-block;background:#0270ab;color:#fff;font-weight:700;padding:.6rem 1.1rem;border-radius:.8rem;text-decoration:none}
+.lb section{padding:2.5rem 0 .5rem;scroll-margin-top:5rem}.lb a{color:#0270ab}
+html.dark .lb .lead,html.dark .lb .mut{color:#a8b6c8}html.dark .lb .card{background:#131e30;border-color:#233249}
+html.dark .lb .note{background:#2a2412;color:#ffe3a3}html.dark .lb .note.bad{background:#2d1816;color:#ffd4cf}
+html.dark .lb th,html.dark .lb td{border-color:#233249}html.dark .lb code{background:#1e293b;color:#e7edf5}html.dark .lb a{color:#5cc8f7}
+html.dark .lb .badge{border-color:#334155;color:#a8b6c8}html.dark .lb .v-ok{color:#34d399}html.dark .lb .v-no{color:#fbbf24}
+</style>
+</head>
+<body class="bg-white text-slate-800">
+<div id="nav-root"></div>
+<header class="relative overflow-hidden grid-bg"><div class="max-w-4xl mx-auto px-4 py-12 relative animate-fadeUp">
+<span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-100 text-brand-700 text-sm font-medium mb-4">หลักการ · ซอฟต์แวร์ · อ้างอิง</span>
+<h1 class="text-4xl md:text-5xl font-extrabold text-slate-900">เบื้องหลัง <span class="hero-grad">Lift Belt</span></h1>
+<p class="mt-4 text-lg text-slate-600 max-w-2xl">วัดมุมลำตัวอย่างไร ทำไมใช้ 45° ซอฟต์แวร์ทำงานอย่างไร และข้อมูลทั้งหมดมาจากแหล่งไหน พร้อมสถานะการตรวจแหล่งอ้างอิง</p>
+<div class="mt-6 flex flex-wrap gap-2 text-sm"><a class="px-3 py-1.5 rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100" href="#problem">ปัญหา</a><a class="px-3 py-1.5 rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100" href="#benefit">ประโยชน์</a><a class="px-3 py-1.5 rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100" href="#principle">หลักการ</a><a class="px-3 py-1.5 rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100" href="#software">ซอฟต์แวร์</a><a class="px-3 py-1.5 rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100" href="#limits">ข้อจำกัด</a><a class="px-3 py-1.5 rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100" href="#refs">อ้างอิง</a></div>
+</div></header>
+<main class="lb max-w-4xl mx-auto px-4 pb-20"><section id="problem"><div class="text-brand-600 font-bold text-sm tracking-wide">1 · ปัญหา</div><h2>การยกของเป็นงานหนักที่สะสมเงียบ ๆ</h2>
+<p class="lead">อาการปวดหลังส่วนล่างเป็นปัญหาสุขภาพระดับโลก และปัจจัยด้านอาชีพเป็นหนึ่งในปัจจัยเสี่ยงที่ถูกนับรวมในการประเมิน</p>
+<div class="grid">
+<div class="card"><div class="big" style="color:var(--warn)">619 ล้านคน</div><p>ทั่วโลกมีอาการปวดหลังส่วนล่างในปี 2020 (ช่วงความไม่แน่นอน 95%: 554–694 ล้านคน) คาดว่าถึง 843 ล้านคนในปี 2050 <a href="#r1">[1]</a></p></div>
+<div class="card"><div class="big" style="color:var(--warn)">≈25%</div><p>ของเวลางานของคนงานก่อสร้าง 15 คนอยู่ในท่าก้มลำตัวเกิน 20° (กลุ่มตัวอย่างเล็ก) <a href="#r3">[3]</a></p></div>
+<div class="card"><div class="big" style="color:var(--warn)">57.7%</div><p>ของแรงงานหญิงในงานก่อสร้างไทยที่ศึกษารายงานอาการระบบกล้ามเนื้อและกระดูก ส่วนที่พบบ่อยคือหลังส่วนล่างและไหล่ ปัจจัยสัมพันธ์รวมท่าทางที่ไม่เหมาะสม <a href="#r6">[6]</a></p></div>
+</div>
+<p class="mut">ตัวเลขข้างต้นเป็นสถิติ/การสำรวจกลุ่มเฉพาะ ไม่ใช่ความเสี่ยงของคนทุกคน และไม่ได้พิสูจน์ว่าการก้มหลังเป็นสาเหตุโดยตรง ปัญหาที่เราตั้งโจทย์คือ <b>ผู้ยกของมักไม่รู้ว่าตัวเองก้มลึกแค่ไหนขณะทำงาน</b> (ข้อนี้เป็นสมมติฐานของโครงงาน ยังต้องยืนยันกับผู้ใช้จริง — USER_UNVALIDATED)</p></section><section id="benefit"><div class="text-brand-600 font-bold text-sm tracking-wide">2 · ประโยชน์ที่คาดหวัง</div><h2>ให้ข้อมูลทันที เพื่อให้ผู้ใช้ปรับท่าเอง</h2>
+<div class="grid">
+<div class="card"><h3>รู้ตัวทันที</h3><p>สั่นที่เอวเมื่อก้มเกินเกณฑ์ ไม่ต้องมองจอขณะยก ในการทดลองจำลองงานก่อสร้าง สัญญาณสั่นทำให้มุมก้มสูงสุดลดลงในงานยก–วางและตักดิน <a href="#r2">[2]</a></p></div>
+<div class="card"><h3>ปรับเกณฑ์ได้</h3><p>เริ่มที่ 45° ตามงานวิจัย ปรับได้ 20–80° ผ่านหน้าเว็บ และเลือกโหมดเตือนให้เหมาะกับงาน</p></div>
+<div class="card"><h3>เห็นข้อมูลของตัวเอง</h3><p>กราฟมุมย้อนหลัง 60 วินาที จำนวนครั้งที่เตือน และบันทึก CSV เพื่อใช้ฝึก/ทบทวนท่าร่วมกับผู้สอนหรือผู้ดูแลความปลอดภัย</p></div>
+<div class="card"><h3>สร้างเองได้ ราคาเข้าถึงได้</h3><p>ใช้ XIAO ESP32-C3 + IMU MPU6050 + มอเตอร์สั่น ตัวเรือนพิมพ์ 3D PCB หน้าเดียวทำเองได้ ชิ้นส่วนหาซื้อในไทย</p></div>
+</div>
+<div class="note bad"><b>สิ่งที่ไม่อ้าง:</b> ไม่อ้างว่าป้องกันการบาดเจ็บหรือโรค ไม่วินิจฉัย และไม่รับประกันผล ทบทวนเชิงระบบปี 2024 พบว่าหลักฐานของไบโอฟีดแบ็กแบบสวมใส่ยังน้อยและคุณภาพต่ำ ไม่มีผลระยะยาว <a href="#r5">[5]</a></div></section><section id="principle"><div class="text-brand-600 font-bold text-sm tracking-wide">3 · หลักการ</div><h2>วัดมุมลำตัวอย่างไร และทำไมใช้ 45°</h2>
+<h3>หลักการวัด</h3>
+<p>IMU วัดเวกเตอร์แรงโน้มถ่วง <b>g</b> ในกรอบของเซนเซอร์ ตอนยืนตรงผู้ใช้กดปรับศูนย์ เก็บ <b>g₀</b> ไว้ มุมก้มคือมุมระหว่างเวกเตอร์ปัจจุบันกับ g₀:</p>
+<pre>θ = arccos( ĝ · ĝ₀ )        ĝ = g / |g|   (หน่วย องศา)</pre>
+<p>ข้อดีคือไม่ต้องรู้ว่าติดเซนเซอร์ทิศไหน ข้อจำกัดคือเอียงข้างก็ถูกนับเป็นมุม และการเคลื่อนไหวเร็วทำให้แรงโน้มถ่วงปนกับความเร่งของการเคลื่อนที่ (ยังไม่ได้ใช้ไจโรช่วยกรอง)</p>
+<h3>ทำไมเกณฑ์ 45°</h3>
+<p>เป็นค่าที่ Lim &amp; Yang (NIOSH/CDC, 2023) ใช้ในการทดลอง: ค่าเฉลี่ยเคลื่อนที่ของมุมก้มลำตัวเกิน 45° → สั่นสั้น 3 พัลส์ ถ้าเกิน 2 ครั้งใน 2 นาที → สั่นยาว 3 วินาทีแล้วพัก 30 วินาที <a href="#r2">[2]</a> เราใช้เป็นค่าเริ่มต้นเท่านั้น และให้ปรับได้ มาตรฐาน ISO 11226 ใช้เกณฑ์มุมกับเวลาที่ต่างออกไป ซึ่ง <b>ยังไม่ได้ตรวจกับตารางฉบับทางการ</b> จึงยังไม่ฝังในซอฟต์แวร์ <a href="#r7">[7]</a></p>
+<h3>ทำไมวัดที่เอว ไม่ใช่หน้าอก</h3>
+<p>เข็มขัดระดับเอวอยู่ใกล้หลังส่วนล่างและเคลื่อนตามการเอียงของสะโพก–ลำตัวส่วนล่าง ระบบเตือนเอวสำหรับคนงานก่อสร้างของ CIC ฮ่องกงก็ใช้ตำแหน่งนี้ <a href="#r9">[9]</a> และงานวิจัย CDC ใช้ IMU ที่หลังเพื่อประเมินมุมลำตัว <a href="#r8">[8]</a> (ความถูกต้องของ IMU ตัวเดียวขึ้นกับงาน มีรายงานคลาดเคลื่อนตั้งแต่ราว 3° ถึงมากกว่า 15° ในงานต่างกัน)</p>
+<div class="note"><b>ก้มหลังกับย่อเข่า — อย่าสรุปเกินหลักฐาน:</b> การทบทวนงานชีวกลศาสตร์พบว่าแรงกดบนกระดูกสันหลังไม่ต่างกันอย่างชัดเจนระหว่างท่าก้ม (stoop) กับท่าย่อเข่า (squat) และไม่สนับสนุนการแนะนำท่าใดท่าหนึ่งเพื่อป้องกันปวดหลัง <a href="#r4">[4]</a> Lift Belt จึงเป็นเครื่องมือ <b>แจ้งมุมก้มของลำตัว</b> ไม่ได้ตัดสินว่าท่าไหน "ถูก" หรือ "ผิด" ทางการแพทย์</div></section><section id="software"><div class="text-brand-600 font-bold text-sm tracking-wide">4 · ซอฟต์แวร์</div><h2>สถาปัตยกรรมและอัลกอริทึม</h2>
+<svg viewBox="0 0 1000 250" style="width:100%;height:auto;background:#101827;border:1px solid #26364f;border-radius:16px">
+<defs><marker id="ar" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="#4aa3ff"/></marker></defs>
+<g fill="#16233a" stroke="#4aa3ff" stroke-width="2"><rect x="20" y="70" width="170" height="90" rx="14"/><rect x="250" y="70" width="190" height="90" rx="14"/><rect x="500" y="70" width="190" height="90" rx="14"/><rect x="760" y="20" width="220" height="80" rx="14"/><rect x="760" y="140" width="220" height="80" rx="14"/></g>
+<g fill="#e8eef5" font-size="19" text-anchor="middle" font-weight="700"><text x="105" y="108">MPU6050</text><text x="345" y="108">เฟิร์มแวร์ XIAO</text><text x="595" y="108">BLE GATT</text><text x="870" y="58">เว็บแอป</text><text x="870" y="178">มอเตอร์สั่น</text></g>
+<g fill="#93a6bb" font-size="15" text-anchor="middle"><text x="105" y="135">แรงโน้มถ่วง 25 Hz</text><text x="345" y="135">มุม · dwell · โหมด</text><text x="595" y="135">notify 5 Hz</text><text x="870" y="82">Web Bluetooth</text><text x="870" y="202">สั้น 3 พัลส์ / ยาว 3 วิ</text></g>
+<g stroke="#4aa3ff" stroke-width="3" fill="none" marker-end="url(#ar)"><path d="M190,115 H246"/><path d="M440,115 H496"/><path d="M690,100 L756,62"/><path d="M345,160 V190 H756"/></g>
+</svg>
+<h3>ลำดับการประมวลผลในเฟิร์มแวร์ (XIAO ESP32-C3)</h3>
+<pre>ทุก 40 ms (25 Hz):  อ่าน g → ทำให้เป็นเวกเตอร์หนึ่งหน่วย → θ = acos(ĝ·ĝ₀)
+                    เฉลี่ยเคลื่อนที่ 5 ตัวอย่าง (≈0.2 วินาที)
+ถ้า θ &gt; เกณฑ์ ค้างเกิน 0.8 วินาที  → bent = true , จดค่าสูงสุด peak
+โหมด 0 (ก้มค้าง):   เตือนเมื่อ θ &gt; เกณฑ์ และ bent
+โหมด 1 (ลุกขึ้น):    เตือนเมื่อ bent และ θ &lt; peak − 10°
+หลังเตือน: ไม่เตือนซ้ำจนกว่า θ &lt; เกณฑ์ − 5°
+สั่นสั้น 3 พัลส์ ; ถ้าเตือน &gt; 2 ครั้งใน 2 นาที → สั่นยาว 3 วินาที แล้วพัก 30 วินาที</pre>
+<p class="mut">ค่า 0.8 วินาที, 10°, 5° ผู้พัฒนาตั้งเป็นค่าเริ่มต้น <b>ยังไม่มีผลทดลองรองรับ</b> ต้องปรับกับผู้ใช้จริง</p>
+<h3>โครง BLE (GATT)</h3>
+<table><tr><th>Characteristic</th><th>สิทธิ์</th><th>ข้อมูล (little-endian)</th></tr>
+<tr><td>DATA <code>…0002…</code></td><td>notify ~5 Hz</td><td>int16 มุม×100 · u8 flags (b0 เกินเกณฑ์, b1 สั่นสั้น, b2 สั่นยาว/พัก, b3 ปรับศูนย์แล้ว) · u8 แบต (255=ไม่ทราบ) · u16 จำนวนครั้งที่เตือน</td></tr>
+<tr><td>CFG <code>…0003…</code></td><td>read/write</td><td>u8 เกณฑ์ (20–80°) , u8 โหมด (0/1)</td></tr>
+<tr><td>CMD <code>…0004…</code></td><td>write</td><td>1 ปรับศูนย์ · 2 ทดสอบสั่นสั้น · 3 ทดสอบสั่นยาว</td></tr></table>
+<h3>เว็บแอป</h3>
+<ul><li>HTML/JS ไฟล์เดียว ไม่มีเซิร์ฟเวอร์ ไม่ส่งข้อมูลออกนอกเครื่อง ข้อมูลมุมอยู่ในเบราว์เซอร์และบันทึก CSV ลงเครื่องผู้ใช้เท่านั้น</li>
+<li>ใช้ Web Bluetooth: รองรับ Chrome/Edge บนเดสก์ท็อปและ Android; Safari/iOS และ Firefox ไม่รองรับ (ตรวจจากแหล่งทุติยภูมิ เมื่อ 7 พ.ย. 2026) ต้องเปิดผ่าน HTTPS หรือ localhost และกดเชื่อมต่อด้วยมือ <a href="#r10">[10]</a></li>
+<li>มี <b>โหมดทดลอง</b> ที่รันตรรกะเดียวกับเฟิร์มแวร์กับข้อมูลจำลอง เพื่อดูผลของโหมดและ dwell โดยไม่ต้องมีอุปกรณ์</li></ul>
+<div class="btns"><a class="btn" href="app.html">เปิดแอป / โหมดทดลอง</a></div>
+<h3>สถานะซอฟต์แวร์</h3>
+<table><tr><th>ส่วน</th><th>สถานะ</th></tr>
+<tr><td>เฟิร์มแวร์โหนดเอว</td><td>คอมไพล์ผ่านสำหรับ XIAO_ESP32C3 · <b>ยังไม่ทดสอบกับบอร์ดจริง</b></td></tr>
+<tr><td>เว็บแอป</td><td>ตรวจสคริปต์ผ่าน · ทดสอบโหมดทดลองแล้ว · <b>ยังไม่ทดสอบเชื่อมกับอุปกรณ์จริง</b></td></tr>
+<tr><td>โหนดข้อมือ + ตรวจ "กำลังยก"</td><td>UNASSIGNED · ยังไม่ได้ทำ</td></tr>
+<tr><td>การวัดแบตเตอรี่</td><td>ยังไม่มีวงจรวัดบนบอร์ด รายงานเป็น "ไม่ทราบ"</td></tr></table></section><section id="limits"><div class="text-brand-600 font-bold text-sm tracking-wide">5 · ข้อจำกัดที่ต้องบอก</div><h2>สิ่งที่ยังไม่รู้</h2>
+<div class="grid">
+<div class="card"><h3>ก้มเฉย ๆ ก็เตือน</h3><p>โหนดเอววัดแค่มุม ไม่รู้ว่ากำลังถือของ การก้มค้างโดยไม่ยกของยังเตือนได้ ลดได้ด้วย dwell และโหมดลุกขึ้น แผนต่อไปคือให้ข้อมือตรวจการยก (ยังไม่ได้ทำ ยังไม่มีหลักฐานว่าข้อมือข้างเดียวตรวจการยกได้แม่น)</p></div>
+<div class="card"><h3>หลักฐานระยะสั้น</h3><p>งานวิจัยที่อ้างเป็นผลทันทีในห้องทดลอง ผู้เข้าร่วม 14 คนไม่ใช่คนงานจริง ไม่ได้วัดการบาดเจ็บ และไม่เห็นผลในงานผูกเหล็ก <a href="#r2">[2]</a></p></div>
+<div class="card"><h3>ความแม่นของ IMU</h3><p>IMU ตัวเดียวมีความคลาดเคลื่อนขึ้นกับงานและการติดตั้ง ต้องสอบเทียบกับระบบอ้างอิงก่อนใช้ตัวเลขจริง</p></div>
+<div class="card"><h3>ยังไม่ทดสอบกับคน</h3><p>ยังไม่มีการทดสอบการใช้งาน ความสบาย อายุแบต หรือเสียงรบกวนในไซต์งานจริง ผลทดสอบกับผู้ใช้ต้องผ่านผู้รับผิดชอบด้านความปลอดภัยก่อนนำไปใช้</p></div></div></section><section id="refs"><div class="text-brand-600 font-bold text-sm tracking-wide">6 · เอกสารอ้างอิง</div><h2>แหล่งที่มา และสถานะการตรวจ</h2>
+<p class="mut">ป้าย <span class="badge v-ok">อ่านฉบับเต็ม</span> = อ่านเนื้อหาเต็ม · <span class="badge v-no">อ่านบทคัดย่อ/สรุป</span> = ยังไม่ได้อ่านฉบับเต็ม ควรเปิดต้นฉบับยืนยันก่อนอ้างต่อ · ตรวจเมื่อ 6–7 พ.ย. 2026</p>
+<ol class="refs">
+<li id="r1">Ferreira ML และคณะ. Global, regional, and national burden of low back pain, 1990–2020, its attributable risk factors, and projections to 2050. <i>The Lancet Rheumatology</i> 2023;5(6):e316–e329. doi:10.1016/S2665-9913(23)00098-X <a href="https://pubmed.ncbi.nlm.nih.gov/37273833/">PubMed</a> <span class="badge v-no">อ่านบทคัดย่อ</span></li>
+<li id="r2">Lim S, Yang X. Applied Ergonomics 110 (2023) 104019 — การทดลองสัญญาณสั่นเตือนมุมก้มลำตัวในงานจำลองก่อสร้าง (NIOSH/CDC) <a href="https://doi.org/10.1016/j.apergo.2023.104019">doi</a> <span class="badge v-ok">อ่านฉบับเต็ม</span></li>
+<li id="r3">Porta และคณะ. Ergonomics — สังเกตท่าทางคนงานก่อสร้าง 15 คน ~25% ของเวลาก้ม &gt;20° <a href="https://vtechworks.lib.vt.edu/items/8de7e9bb-f761-4987-b097-09f00a22960c/full">VT</a> <span class="badge v-no">อ่านบทคัดย่อ</span></li>
+<li id="r4">van Dieën JH, Hoozemans MJM, Toussaint HM. Stoop or squat: a review of biomechanical studies on lifting technique. <i>Clinical Biomechanics</i> 1999;14(10):685–696. <a href="https://pubmed.ncbi.nlm.nih.gov/10545622/">PubMed</a> <span class="badge v-no">อ่านบทคัดย่อ/สรุป</span></li>
+<li id="r5">ทบทวนเชิงระบบ 2024 เรื่องไบโอฟีดแบ็กแบบสวมใส่ (Healthcare, 8 งาน) <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11012179/">PMC11012179</a> <span class="badge v-no">อ่านบทคัดย่อ</span></li>
+<li id="r6">Musculoskeletal disorders among Thai women in construction-related work (2014, Asia-Pacific Journal of Public Health) <a href="https://repository.li.mahidol.ac.th/handle/123456789/34399">Mahidol repository</a> <span class="badge v-no">อ่านบทคัดย่อ/สรุป</span></li>
+<li id="r7">ISO 11226 Ergonomics — Evaluation of static working postures (ตัวเลขมุม/เวลาที่เห็นมาจากสรุปรอง) <span class="badge v-no">ยังไม่ได้ตรวจกับฉบับทางการ</span></li>
+<li id="r8">Lu และ Barim (CDC/NIOSH) — การประเมินมุมลำตัวด้วย IMU ในงานยก <a href="https://stacks.cdc.gov/">CDC stacks</a> <span class="badge v-no">อ่านสรุป</span></li>
+<li id="r9">CIC Hong Kong. Waistband Enabled Construction Workers Low Back Health Monitoring System <a href="https://cic.hk/files/page/10390/CICR01_15-Waistband%20Enabled%20Construction%20Workers%20Low%20Back%20Health%20Monitoring%20System_RS026.pdf">PDF</a> <span class="badge v-no">อ่านสรุป</span></li>
+<li id="r10">Web Bluetooth browser support (web-features explorer / caniuse) <a href="https://web-platform-dx.github.io/web-features-explorer/features/web-bluetooth">ลิงก์</a> <span class="badge v-no">แหล่งทุติยภูมิ ตรวจ 7 พ.ย. 2026</span></li>
+</ol></section></main>
+<footer class="border-t border-slate-100 py-8 text-center text-slate-400 text-sm">Lift Belt · ต้นแบบโครงงาน · เครื่องมือสร้างความตระหนักรู้ ไม่ใช่อุปกรณ์ทางการแพทย์</footer>
+<script type="module">import { renderNav } from "./js/app.js"; renderNav("science");</script>
+</body></html>
