@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lift Belt – เข็มขัดเตือนมุมก้มลำตัว</title>
   <meta name="description" content="เข็มขัดเตือนมุมก้มลำตัวขณะยกของ — ต้นแบบเพื่อสร้างความตระหนักรู้ ไม่ใช่อุปกรณ์ทางการแพทย์" />
-  <meta name="theme-color" content="#0ea5e9" />
+  <meta name="theme-color" content="#f97316" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Lift Belt" />
   <meta property="og:description" content="เข็มขัดเตือนมุมก้มลำตัวขณะยกของ — ต้นแบบเพื่อสร้างความตระหนักรู้ ไม่ใช่อุปกรณ์ทางการแพทย์" />
@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="css/tailwind.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <!-- THEME:FONTS:START ocean -->
+  <!-- THEME:FONTS:START safety -->
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <!-- THEME:FONTS:END -->
   <script>try { if (localStorage.getItem("lift-belt-theme") === "dark") document.documentElement.classList.add("dark"); } catch (e) {}</script>
@@ -57,12 +57,7 @@
       <!-- signature moment: live animated posture -->
       <div class="relative animate-fadeUp" style="animation-delay:.15s">
         <div class="hero-visual relative z-10 glass rounded-3xl shadow-2xl shadow-brand-900/10 border border-brand-100 px-4 pb-4 pt-8 max-w-md mx-auto" aria-label="ภาพจำลองคนก้มยกของ มีมุมและสถานะการเตือน" role="img">
-          <svg id="fig" viewBox="0 0 400 330" class="w-full h-auto" aria-hidden="true">
-            <defs><linearGradient id="gv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9f1c"/><stop offset="1" stop-color="#f97316"/></linearGradient></defs>
-            <line x1="10" y1="300" x2="390" y2="300" stroke="currentColor" stroke-opacity=".25" stroke-width="3"/>
-            <rect id="box" x="250" y="258" width="46" height="42" rx="3" fill="#c0914f" stroke="#6e4d1f" stroke-width="2"/>
-            <g id="body"></g>
-          </svg>
+          <canvas id="fig" width="800" height="560" class="w-full h-auto rounded-xl" aria-hidden="true"></canvas>
           <div class="mt-2 flex items-end justify-between gap-3">
             <div><div class="text-xs text-slate-500">มุมก้มลำตัว</div><div class="text-5xl font-extrabold leading-none" id="ang">0°</div></div>
             <div id="st" class="px-3 py-1.5 rounded-xl text-sm font-bold bg-emerald-100 text-emerald-700">ปกติ</div>
@@ -163,44 +158,60 @@
       const tick = (t) => { const p = Math.min(1, (t - t0) / dur); el.textContent = Math.round(to * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(tick); };
       requestAnimationFrame(tick); setTimeout(() => { el.textContent = to; }, dur + 200);
     });
-    // ---- hero figure (side view, stoop cycle). Illustration only. ----
-    const NS = "http://www.w3.org/2000/svg", body = document.getElementById("body");
-    const el = (n, a) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); body.appendChild(e); return e; };
-    const L = 1.15, GY = 300, TR = 58, LEG = 52, R = (d) => d * Math.PI / 180;
+    // ---- hero figure: same worker model as the presentation animation. Illustration only. ----
+    const cv = document.getElementById("fig"), g = cv.getContext("2d");
+    const R = (d) => d * Math.PI / 180, lerp = (a, b, k) => a + (b - a) * k;
     const ease = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
-    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    let warns = 0, was = false, last = 0;
-    function draw(t) {
-      const c = reduce ? 0.3 : (t / 7000) % 1;
-      let th = 0;
-      if (c < .3) th = 85 * ease(c / .3); else if (c < .45) th = 85; else if (c < .75) th = 85 * (1 - ease((c - .45) / .3)); else th = 0;
-      const hx = 150 - 70 * Math.sin(R(th)) * 0 + (th > 0 ? -th * .5 : 0), hy = GY - 2 * LEG * Math.cos(R(Math.min(th, 85) * .55));
-      const hip = [hx + 30, hy], sh = [hip[0] + TR * Math.sin(R(th)), hip[1] - TR * Math.cos(R(th))];
-      const knee = [hip[0] + 36 + th * .15, (hip[1] + GY) / 2 + 6], over = th > 45;
-      body.innerHTML = "";
-      const ln = (a, b, w, col) => el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: col, "stroke-width": w, "stroke-linecap": "round" });
-      ln(hip, knee, 15, "#2f4660"); ln(knee, [hx + 10, GY - 4], 13, "#2f4660");
-      ln(hip, sh, 22, over ? "#ff5a4d" : "url(#gv)");
-      const hd = [sh[0] + 14 * Math.sin(R(th)), sh[1] - 14 * Math.cos(R(th))];
-      el("circle", { cx: hd[0], cy: hd[1], r: 11, fill: "#e9b98a" });
-      el("path", { d: `M${hd[0] - 12} ${hd[1] - 1} a12 11 0 0 1 24 0z`, fill: "#ffd23f", transform: `rotate(${th} ${hd[0]} ${hd[1]})` });
-      const hand = [lerp(sh[0] + 20, 262, ease(th / 85)), lerp(sh[1] + 40, 272, ease(th / 85))];
-      ln(sh, hand, 10, "#e9b98a");
-      const bn = [hip[0] + 14 * Math.cos(R(th)), hip[1] - 4];
-      const g = el("rect", { x: bn[0] - 6, y: bn[1] - 12, width: 12, height: 24, rx: 4, fill: "#1d6fd1", stroke: "#8ec5ff", "stroke-width": 2, transform: `rotate(${th} ${bn[0]} ${bn[1]})` });
-      el("circle", { cx: bn[0], cy: bn[1] - 7, r: 2.4, fill: over ? "#ff4d4f" : "#3ecf8e" });
-      if (over) for (let i = 0; i < 2; i++) { const ph = ((t / 500 + i / 2) % 1); el("circle", { cx: bn[0], cy: bn[1], r: 10 + ph * 38, fill: "none", stroke: "rgba(255,77,79," + (1 - ph) + ")", "stroke-width": 3 }); }
-      const ang = Math.max(0, th);
+    const L = 45, TR = 55, AU = 33, AF = 33, BX = 36, BH = 34, XB = 48, HY = 26, S = 2.8, OX = 230, GY = 520, THR = 45;
+    const X = (x) => OX + x * S, Y = (y) => GY - y * S;
+    let reduce_ = false; const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let warns = 0, was = false;
+    function ik(P, T, l1, l2, s) { const dx = T[0] - P[0], dy = T[1] - P[1], full = Math.hypot(dx, dy) || 1e-3, d = Math.min(full, l1 + l2 - .01), a = (l1 * l1 - l2 * l2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, l1 * l1 - a * a)), ux = dx / full, uy = dy / full; return { j: [P[0] + ux * a + s * h * -uy, P[1] + uy * a + s * h * ux], e: [P[0] + ux * d, P[1] + uy * d] }; }
+    function limb(a, b, w, col) { g.lineCap = "round"; g.strokeStyle = "#0a0f1a"; g.lineWidth = (w + 2.2) * S; g.beginPath(); g.moveTo(X(a[0]), Y(a[1])); g.lineTo(X(b[0]), Y(b[1])); g.stroke(); g.strokeStyle = col; g.lineWidth = w * S; g.beginPath(); g.moveTo(X(a[0]), Y(a[1])); g.lineTo(X(b[0]), Y(b[1])); g.stroke(); }
+    function pose(c, time) {
+      const G = { th: 85, hh: 78 }, gx = XB - 6 - TR * Math.sin(R(G.th)), gp = [XB, HY], st = [TR * 0, 90 + TR], ch = [26, 100];
+      let th = 0, hh = 90, hx = 0, hand = [6, 93], carry = false;
+      if (c < .3) { const k = ease(c / .3); th = lerp(0, G.th, k); hh = lerp(90, G.hh, k); hx = lerp(0, gx, k); hand = [lerp(6, gp[0], k), lerp(93, gp[1], k)]; }
+      else if (c < .42) { th = G.th; hh = G.hh; hx = gx; hand = gp; }
+      else if (c < .8) { const k = ease((c - .42) / .38); th = lerp(G.th, 0, k); hh = lerp(G.hh, 90, k); hx = lerp(gx, 0, k); hand = [lerp(gp[0], ch[0], k), lerp(gp[1], ch[1], k)]; carry = true; }
+      else { hand = ch; carry = true; }
+      if (c > .05 && c < .8) th += Math.sin(time / 80) * .6;
+      return { th, hh, hx, hand, carry, c };
+    }
+    function frame(t) {
+      const c = reduce ? .36 : (t / 9000) % 1, p = pose(c, t), over = p.th > THR;
+      g.clearRect(0, 0, 800, 560);
+      g.fillStyle = "rgba(100,116,139,.35)"; g.fillRect(0, GY, 800, 4);
+      g.fillStyle = "rgba(0,0,0,.18)"; g.beginPath(); g.ellipse(X(5), GY + 6, 70, 9, 0, 0, 7); g.fill();
+      const hip = [p.hx, p.hh], tu = [Math.sin(R(p.th)), Math.cos(R(p.th))], sho = [hip[0] + TR * tu[0], hip[1] + TR * tu[1]];
+      const leg = ik(hip, [0, 0], L, L, 1), arm = ik(sho, p.hand, AU, AF, -1);
+      const bA = c > .92 ? 1 - (c - .92) / .08 : c < .05 ? c / .05 : 1;
+      const bc = p.carry && c < .92 ? [arm.e[0] + BX / 2 - 2, arm.e[1] - 2] : [XB + BX / 2, BH / 2];
+      g.globalAlpha = bA; g.fillStyle = "#c0914f"; g.fillRect(X(bc[0] - BX / 2), Y(bc[1] + BH / 2), BX * S, BH * S); g.fillStyle = "#e8d9b5"; g.fillRect(X(bc[0] - 6), Y(bc[1] + BH / 2), 12 * S, BH * S); g.strokeStyle = "#6e4d1f"; g.lineWidth = 3; g.strokeRect(X(bc[0] - BX / 2), Y(bc[1] + BH / 2), BX * S, BH * S); g.globalAlpha = 1;
+      limb(sho, arm.j, 8.5, "#7a4d0a"); limb(arm.j, arm.e, 7.5, "#b88a5e");
+      limb(hip, leg.j, 13, "#2f4660"); limb(leg.j, [0, 4], 11, "#2f4660");
+      g.fillStyle = "#14181f"; g.beginPath(); g.roundRect(X(-8), Y(5), 26 * S, 5 * S, 8); g.fill();
+      limb(hip, sho, 17, over ? "#ff5a4d" : "#ff9f1c");
+      const nx = tu[1], ny = -tu[0];
+      [.3, .62].forEach((k) => { const q = [lerp(hip[0], sho[0], k), lerp(hip[1], sho[1], k)]; g.strokeStyle = "#f4f1c9"; g.lineWidth = 2.4 * S; g.lineCap = "round"; g.beginPath(); g.moveTo(X(q[0] - nx * 7), Y(q[1] - ny * 7)); g.lineTo(X(q[0] + nx * 7), Y(q[1] + ny * 7)); g.stroke(); });
+      const hd = [sho[0] + 14 * tu[0], sho[1] + 14 * tu[1]];
+      g.fillStyle = "#e9b98a"; g.beginPath(); g.arc(X(hd[0]), Y(hd[1]), 9 * S, 0, 7); g.fill();
+      g.save(); g.translate(X(hd[0]), Y(hd[1])); g.rotate(R(p.th)); g.fillStyle = "#ffd23f"; g.beginPath(); g.arc(0, -.5 * S, 10 * S, Math.PI, 0); g.fill(); g.fillRect(-.5 * S, -1.6 * S, 14 * S, 2.2 * S); g.restore();
+      limb(sho, arm.j, 9.5, "#ff9f1c"); limb(arm.j, arm.e, 8, "#e9b98a");
+      const f = [tu[1], -tu[0]], bn = [hip[0] + tu[0] * 3 + f[0] * 10, hip[1] + tu[1] * 3 + f[1] * 10];
+      g.save(); g.translate(X(bn[0]), Y(bn[1])); g.rotate(R(p.th)); g.fillStyle = "#1d6fd1"; g.beginPath(); g.roundRect(-4.5 * S, -8.5 * S, 9 * S, 17 * S, 6); g.fill(); g.strokeStyle = "#8ec5ff"; g.lineWidth = 2; g.stroke();
+      g.fillStyle = over ? "#ff4d4f" : "#3ecf8e"; g.beginPath(); g.arc(0, -5 * S, 1.6 * S, 0, 7); g.fill(); g.restore();
+      if (over) for (let i = 0; i < 2; i++) { const ph = ((t / 600 + i / 2) % 1); g.strokeStyle = "rgba(255,77,79," + (1 - ph) + ")"; g.lineWidth = 4; g.beginPath(); g.arc(X(bn[0]), Y(bn[1]), 14 + ph * 70, 0, 7); g.stroke(); }
+      const ang = Math.max(0, p.th);
       document.getElementById("ang").textContent = Math.round(ang) + "°";
-      document.getElementById("bar").style.width = Math.min(100, ang / 90 * 100) + "%";
-      document.getElementById("bar").className = "h-full rounded-full bg-gradient-to-r " + (over ? "from-rose-400 to-rose-500" : "from-emerald-400 to-emerald-500");
+      const bar = document.getElementById("bar"); bar.style.width = Math.min(100, ang / 90 * 100) + "%";
+      bar.className = "h-full rounded-full bg-gradient-to-r " + (over ? "from-rose-400 to-rose-500" : "from-emerald-400 to-emerald-500");
       const st = document.getElementById("st"); st.textContent = over ? "เกินเกณฑ์ · สั่นเตือน" : "ปกติ";
       st.className = "px-3 py-1.5 rounded-xl text-sm font-bold " + (over ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700");
       if (over && !was) { warns++; document.getElementById("cnt").textContent = warns + " ครั้ง"; } was = over;
-      document.getElementById("box").setAttribute("y", c > .3 && c < .75 ? String(258 - 40 * ease((c - .3) / .45) * (c > .45 ? 1 : 0)) : "258");
+      if (!reduce && !reduce_) requestAnimationFrame(frame);
     }
-    function lerp(a, b, k) { return a + (b - a) * k; }
-    (function loop(t) { draw(t); if (!reduce) requestAnimationFrame(loop); })(0);
+    const TT = new URLSearchParams(location.search).get('t'); if (TT !== null) { document.head.insertAdjacentHTML('beforeend','<style>*{animation:none!important;transition:none!important}.reveal{opacity:1!important;transform:none!important}</style>'); document.querySelectorAll('.count-up').forEach(e=>e.textContent=e.dataset.to); reduce_ = true; frame(+TT); } else requestAnimationFrame(frame);
   </script>
 </body>
 </html>
