@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lift Belt – แอปดูมุมก้ม</title>
+<style>
+:root{--bg:#10151c;--card:#1a222d;--tx:#e8eef5;--mut:#8da0b3;--ok:#3ecf8e;--warn:#ffb020;--bad:#ff4d4f;--ac:#4aa3ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px system-ui,"Noto Sans Thai",sans-serif;padding:16px;max-width:760px;margin:auto}
+h1{font-size:20px;margin:0 0 4px}.sub{color:var(--mut);font-size:13px;margin-bottom:14px}
+.card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{background:var(--ac);color:#04121f;border:0;border-radius:10px;padding:10px 14px;font-weight:600;font-size:15px}
+button.g{background:#2a3645;color:var(--tx)}button:disabled{opacity:.4}
+#st{margin-left:auto;font-size:13px;color:var(--mut)}
+.big{text-align:center}#ang{font-size:72px;font-weight:700;line-height:1}#lab{color:var(--mut);margin-top:4px}
+canvas{width:100%;display:block}
+.k{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}.k b{font-size:22px;display:block}.k span{font-size:12px;color:var(--mut)}
+input[type=range]{width:100%}.note{font-size:12px;color:var(--mut);line-height:1.5}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+</style></head><body>
+<h1>Lift Belt – แอปดูมุมก้ม</h1><div class="sub"><a href="index.html" style="color:#4aa3ff">← กลับหน้าโครงงาน</a></div>
+<div class="sub">แสดงมุมแบบเรียลไทม์เพื่อสร้างความตระหนักรู้เท่านั้น ไม่ใช่อุปกรณ์ป้องกันการบาดเจ็บหรือวินิจฉัย</div>
+
+<div class="card"><div class="row">
+<button id="bc">เชื่อมต่อ BLE</button><button id="bd" class="g">โหมดทดลอง</button><button id="bx" class="g" disabled>ตัดการเชื่อมต่อ</button>
+<span id="st">ยังไม่เชื่อมต่อ</span></div></div>
+
+<div class="card big"><div id="ang">--</div><div id="lab">องศา (ลำตัวก้มจากท่ายืน)</div></div>
+
+<div class="card"><canvas id="cv" width="720" height="260"></canvas></div>
+
+<div class="card k">
+<div><b id="ov">0</b><span>เตือนในหน้าต่างเวลา</span></div>
+<div><b id="mx">0°</b><span>มุมสูงสุดรอบนี้</span></div>
+<div><b id="bt">--</b><span>แบตเตอรี่ %</span></div></div>
+
+<div class="card">
+<div class="row"><label for="th">เกณฑ์เตือน: <b id="thv">45</b>°</label></div>
+<input id="th" type="range" min="20" max="80" value="45">
+<div class="row" style="margin-top:8px"><label for="md">โหมดเตือน:</label><select id="md" style="background:#2a3645;color:#e8eef5;border:0;border-radius:8px;padding:8px"><option value="0">เตือนเมื่อก้มค้างเกินเกณฑ์ (&gt;0.8 วิ)</option><option value="1">เตือนตอนลุกขึ้นหลังก้มลึก</option></select></div>
+<div class="row" style="margin-top:8px">
+<button id="bs" class="g" disabled>บันทึกเกณฑ์/โหมดลงอุปกรณ์</button>
+<button id="bk" class="g" disabled>ปรับศูนย์ (ยืนตรง)</button>
+<button id="bt1" class="g" disabled>ทดสอบสั่นสั้น</button>
+<button id="bt2" class="g" disabled>ทดสอบสั่นยาว</button>
+<button id="be" class="g">บันทึก CSV</button></div>
+<div class="note" style="margin-top:8px">ค่าเริ่มต้น 45° (Lim &amp; Yang 2023) สั่นสั้น 3 พัลส์; เกิน 2 ครั้งใน 2 นาที → สั่นยาว 3 วินาที แล้วพัก 30 วินาที (ตรรกะทำงานในอุปกรณ์) ต้องเปิดผ่าน https หรือ localhost ด้วย Chrome/Edge (Android/PC) ; iOS Safari ไม่รองรับ Web Bluetooth</div></div>
+
+<script>
+// ---- GATT spec (ต้องตรงกับเฟิร์มแวร์; ดู README.md) ----
+const SVC='6c696674-0001-4b31-9a10-00000000a001',
+  CH_DATA='6c696674-0002-4b31-9a10-00000000a001',  // notify 6B: int16 angle*100, u8 flags, u8 batt, u16 warnCount
+  CH_CFG ='6c696674-0003-4b31-9a10-00000000a001',  // r/w 1B: threshold deg
+  CH_CMD ='6c696674-0004-4b31-9a10-00000000a001';  // w 1B: 1=zero 2=short 3=long
+const $=id=>document.getElementById(id);
+let dev=null,cfg=null,cmd=null,demo=null,thr=45,max=0,buf=[],log=[];
+const N=300; // ~60 s at 5 Hz
+function setSt(t,c){$('st').textContent=t;$('st').className=c||''}
+function push(a,fl,bat,wc){
+  const t=Date.now(); buf.push({t,a,fl}); if(buf.length>N)buf.shift(); log.push([new Date(t).toISOString(),a.toFixed(2),fl,bat,wc]);
+  max=Math.max(max,a);
+  $('ang').textContent=a.toFixed(0);
+  const over=a>thr; $('ang').className=over?'bad':a>thr*.8?'warn':'ok';
+  $('mx').textContent=max.toFixed(0)+'°'; $('ov').textContent=wc;
+  $('bt').textContent=bat>100?'--':bat; draw();
+}
+function draw(){
+  const c=$('cv'),g=c.getContext('2d'),W=c.width,H=c.height,top=90;
+  g.clearRect(0,0,W,H); g.font='12px sans-serif'; g.fillStyle='#8da0b3'; g.strokeStyle='#2a3645';
+  for(let v=0;v<=top;v+=30){const y=H-20-(v/top)*(H-30);g.beginPath();g.moveTo(30,y);g.lineTo(W,y);g.stroke();g.fillText(v+'°',2,y+4)}
+  const ty=H-20-(thr/top)*(H-30); g.strokeStyle='#ff4d4f';g.setLineDash([6,4]);g.beginPath();g.moveTo(30,ty);g.lineTo(W,ty);g.stroke();g.setLineDash([]);
+  if(buf.length<2)return; g.strokeStyle='#4aa3ff';g.lineWidth=2;g.beginPath();
+  buf.forEach((p,i)=>{const x=30+(i/(N-1))*(W-30),y=H-20-(Math.max(0,Math.min(top,p.a))/top)*(H-30);i?g.lineTo(x,y):g.moveTo(x,y)});
+  g.stroke();g.lineWidth=1;
+  g.fillStyle='rgba(255,77,79,.9)';buf.forEach((p,i)=>{if(p.fl&2){const x=30+(i/(N-1))*(W-30);g.fillRect(x-1,10,3,H-30)}});
+}
+async function connect(){
+  try{
+    dev=await navigator.bluetooth.requestDevice({filters:[{services:[SVC]}],optionalServices:[SVC]});
+    dev.addEventListener('gattserverdisconnected',()=>{setSt('หลุดการเชื่อมต่อ','bad');ui(false)});
+    setSt('กำลังเชื่อมต่อ…'); const s=await dev.gatt.connect(), sv=await s.getPrimaryService(SVC);
+    const d=await sv.getCharacteristic(CH_DATA); cfg=await sv.getCharacteristic(CH_CFG); cmd=await sv.getCharacteristic(CH_CMD);
+    {const cv=await cfg.readValue();thr=cv.getUint8(0);$('th').value=thr;$('thv').textContent=thr;if(cv.byteLength>1)$('md').value=cv.getUint8(1)}
+    d.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value;push(v.getInt16(0,true)/100,v.getUint8(2),v.getUint8(3),v.getUint16(4,true))});
+    await d.startNotifications(); setSt('เชื่อมต่อแล้ว: '+(dev.name||'Lift Belt'),'ok'); ui(true);
+  }catch(e){setSt('เชื่อมต่อไม่สำเร็จ: '+e.message,'bad')}
+}
+function ui(on){['bs','bk','bt1','bt2'].forEach(i=>$(i).disabled=!on);$('bx').disabled=!on&&!demo;$('bc').disabled=on}
+async function send(c){if(cmd)await cmd.writeValue(Uint8Array.of(c))}
+$('bc').onclick=()=>navigator.bluetooth?connect():setSt('เบราว์เซอร์นี้ไม่รองรับ Web Bluetooth','bad');
+$('bx').onclick=()=>{if(demo){clearInterval(demo);demo=null;setSt('หยุดโหมดทดลอง');$('bx').disabled=true;$('bc').disabled=false}else if(dev&&dev.gatt.connected)dev.gatt.disconnect()};
+$('th').oninput=e=>{thr=+e.target.value;$('thv').textContent=thr;draw()};
+$('bs').onclick=async()=>{await cfg.writeValue(Uint8Array.of(thr,+$('md').value));setSt('บันทึกเกณฑ์ '+thr+'° แล้ว','ok')};
+$('bk').onclick=()=>send(1);$('bt1').onclick=()=>send(2);$('bt2').onclick=()=>send(3);
+// โหมดทดลอง: จำลองรอบก้ม/ยก + ตรรกะเดียวกับเฟิร์มแวร์ (dwell 0.8 วิ, โหมด 0 ก้มค้าง / 1 ตอนลุกขึ้น)
+function prof(t){const p=t%14;
+  if(p<1)return 3;if(p<2.5)return 3+77*((p-1)/1.5);if(p<4.2)return 80;if(p<5.7)return 80-77*((p-4.2)/1.5);
+  if(p<8)return 5;if(p<8.3)return 5+50*((p-8)/.3);if(p<8.6)return 55-50*((p-8.3)/.3);return 5+2*Math.sin(p)}
+$('bd').onclick=()=>{ if(demo)return; buf=[];max=0;let t=0,wc=0,L={since:0,bent:false,peak:0,armed:true},buzz=0;$('bc').disabled=true;$('bx').disabled=false;setSt('โหมดทดลอง (ข้อมูลจำลอง · ตรรกะเดียวกับเฟิร์มแวร์)','warn');
+  demo=setInterval(()=>{t+=.2;const a=Math.max(0,prof(t)+Math.random()*1.5),mode=+$('md').value,now=t*1000;
+    if(a>thr){if(!L.since)L.since=now;if(now-L.since>=800)L.bent=true;if(a>L.peak)L.peak=a}else{L.since=0;if(a<thr-5){L.bent=false;L.peak=0}}
+    if(L.armed&&(mode===0?(a>thr&&L.bent):(L.bent&&a<L.peak-10))){L.armed=false;L.bent=false;L.peak=0;wc++;buzz=1.2}
+    if(a<thr-5)L.armed=true; push(a,buzz>0?2:(a>thr?1:0),255,wc);buzz=Math.max(0,buzz-.2)},200)};
+$('be').onclick=()=>{const b=new Blob(['time,angle_deg,flags,batt,warn\n'+log.map(r=>r.join(',')).join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='lift_belt_log.csv';a.click()};
+draw();
+</script></body></html>

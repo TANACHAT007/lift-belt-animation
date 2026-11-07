@@ -1,234 +1,127 @@
 <!doctype html>
 <html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lift Belt – อนิเมชันนำเสนอโครงงาน</title>
+<title>Lift Belt – เข็มขัดเตือนมุมก้มลำตัว</title>
+<meta name="description" content="ต้นแบบอุปกรณ์สวมใส่ที่เอวเพื่อสร้างความตระหนักรู้เรื่องมุมก้มลำตัวขณะยกของ พร้อมหลักการ ซอฟต์แวร์ และเอกสารอ้างอิง">
 <style>
-html,body{margin:0;background:#070b11;color:#e8eef5;font-family:"Noto Sans Thai","Sarabun",system-ui,sans-serif}
-#w{max-width:1400px;margin:auto}canvas{width:100%;display:block;background:#0c1220}
-.bar{display:flex;gap:6px;padding:10px;flex-wrap:wrap;align-items:center}
-button{background:#1f2a3a;color:#e8eef5;border:0;border-radius:8px;padding:8px 12px;font-size:14px;cursor:pointer}
-button.on{background:#4aa3ff;color:#04121f}.hint{color:#7f93a8;font-size:12px;margin-left:auto}
-</style></head><body><div id="w">
-<canvas id="c" width="1920" height="1080"></canvas>
-<div class="bar"><button id="pp">⏸</button><span id="sb"></span><button id="nv">🔈 เสียงบรรยาย: ปิด</button><button id="fs">เต็มจอ</button>
-<span class="hint">Space เล่น/หยุด · ← → เปลี่ยนฉาก · F เต็มจอ · N เสียง</span></div></div>
-<script>
-const cv=document.getElementById('c'),g=cv.getContext('2d'),W=1920,H=1080;
-const FONT='"Noto Sans Thai","Sarabun",system-ui,sans-serif';
-const img=new Image();img.src='assets/devices.png';
-const THR=45,L=45,TR=55,AU=33,AF=33,BX=36,BH=34,XB=48,HY=26;
-const S=4.3,OX=430,GY=900;
-const R=d=>d*Math.PI/180,lerp=(a,b,k)=>a+(b-a)*k,cl=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),ease=x=>{x=cl(x);return x*x*(3-2*x)};
-const X=x=>OX+x*S,Y=y=>GY-y*S;
-// ---------- scenes: n=ชื่อปุ่ม d=วินาที say=คำบรรยาย (ซับไตเติล+เสียง)
-const SC=[
- {n:'เปิด',d:7,say:'Lift Belt อุปกรณ์เตือนมุมก้มลำตัว เพื่อให้คนยกของรู้ตัวทันที'},
- {n:'ปัญหา',d:15,say:'คนงานก่อสร้างยกของทั้งวัน งานวิจัยพบว่าใช้เวลาราวหนึ่งในสี่อยู่ในท่าก้มเกิน 20 องศา และส่วนใหญ่ไม่รู้ตัว'},
- {n:'อุปกรณ์',d:13,say:'เราออกแบบอุปกรณ์สองชิ้น โหนดเอวคลิปติดเข็มขัดวัดมุมลำตัว และโหนดข้อมือสั่นเตือน'},
- {n:'ทำงานอย่างไร',d:15,say:'เซนเซอร์วัดการเอียงของลำตัวเทียบกับท่ายืนตรง เมื่อเกินเกณฑ์ มอเตอร์จะสั่นเตือนทันที พร้อมส่งข้อมูลผ่านบลูทูธ'},
- {n:'ยกผิดท่า',d:16,say:'ก้มหลังยกของ มุมเกินสี่สิบห้าองศา อุปกรณ์สั่นสามพัลส์'},
- {n:'ยกถูกท่า',d:14,say:'ย่อเข่า หลังตรง มุมไม่เกินเกณฑ์ อุปกรณ์เงียบ'},
- {n:'หน้าเว็บ',d:13,say:'ดูมุมแบบเรียลไทม์ ปรับเกณฑ์ และปรับศูนย์ได้จากหน้าเว็บบนมือถือ'},
- {n:'หลักฐาน',d:15,say:'งานทดลองของ NIOSH ปี 2023 ใช้เกณฑ์สี่สิบห้าองศา พบว่ามุมก้มสูงสุดลดลงในงานยกและตักดิน แต่เป็นผลในห้องทดลองเท่านั้น'},
- {n:'สรุป',d:12,say:'นี่คือต้นแบบเพื่อสร้างความตระหนักรู้ ไม่ใช่อุปกรณ์ทางการแพทย์ ขั้นต่อไปคือทดสอบกับผู้ใช้จริง'}
-];
-// ---------- helpers
-function txt(s,x,y,sz,col,al,wt){g.font=(wt||'400')+' '+sz+'px '+FONT;g.fillStyle=col;g.textAlign=al||'left';g.textBaseline='alphabetic';g.fillText(s,x,y)}
-function wrap(s,x,y,w,sz,col,lh,wt){g.font=(wt||'400')+' '+sz+'px '+FONT;let ln='',yy=y;for(const ch of s){const t=ln+ch;if(g.measureText(t).width>w&&ln){txt(ln,x,yy,sz,col,'left',wt);ln='';yy+=lh}ln+=ch}txt(ln,x,yy,sz,col,'left',wt);return yy+lh}
-function rr(x,y,w,h,r,fill,stroke,lw){g.beginPath();g.roundRect(x,y,w,h,r);if(fill){g.fillStyle=fill;g.fill()}if(stroke){g.strokeStyle=stroke;g.lineWidth=lw||2;g.stroke()}}
-function fade(t,d,a=.6,b=.6){return cl(Math.min(t/a,(d-t)/b))}
-function ik(P,Tg,l1,l2,s){const dx=Tg[0]-P[0],dy=Tg[1]-P[1],full=Math.hypot(dx,dy)||1e-3,d=Math.min(full,l1+l2-.01);
- const a=(l1*l1-l2*l2+d*d)/(2*d),h=Math.sqrt(Math.max(0,l1*l1-a*a)),ux=dx/full,uy=dy/full;
- return{j:[P[0]+ux*a+s*h*-uy,P[1]+uy*a+s*h*ux],e:[P[0]+ux*d,P[1]+uy*d]}}
-// ---------- background (cached)
-const bg=document.createElement('canvas');bg.width=W;bg.height=H;
-(function(){const b=bg.getContext('2d');let gr=b.createLinearGradient(0,0,0,GY);gr.addColorStop(0,'#0b1430');gr.addColorStop(.6,'#24305a');gr.addColorStop(1,'#d9825b');b.fillStyle=gr;b.fillRect(0,0,W,H);
- b.fillStyle='rgba(255,255,255,.7)';for(let i=0;i<60;i++){b.fillRect((i*389)%W,(i*173)%400,2,2)}
- b.fillStyle='#16203c';const bl=[[900,420,130],[1040,320,110],[1160,500,90],[1260,260,150],[1430,430,120],[1560,360,100],[1680,470,140],[1820,300,100]];
- bl.forEach(([x,h,w])=>{b.fillRect(x,GY-h,w,h);b.fillStyle='rgba(255,210,120,.5)';for(let yy=GY-h+16;yy<GY-20;yy+=34)for(let xx=x+12;xx<x+w-14;xx+=30)if(((xx*7+yy*3)|0)%5<2)b.fillRect(xx,yy,12,16);b.fillStyle='#16203c'});
- // tower crane
- b.strokeStyle='#0e1730';b.lineWidth=7;b.beginPath();b.moveTo(1500,GY);b.lineTo(1500,120);b.moveTo(1380,120);b.lineTo(1780,120);b.moveTo(1500,120);b.lineTo(1500,70);b.stroke();
- b.lineWidth=3;for(let y=GY;y>140;y-=40){b.beginPath();b.moveTo(1494,y);b.lineTo(1506,y-40);b.stroke()}b.lineWidth=2;b.beginPath();b.moveTo(1700,120);b.lineTo(1700,260);b.stroke();b.fillStyle='#0e1730';b.fillRect(1684,260,32,24);
- // scaffolding
- b.strokeStyle='rgba(10,15,30,.9)';b.lineWidth=4;for(let x=760;x<=1000;x+=80){b.beginPath();b.moveTo(x,GY);b.lineTo(x,GY-300);b.stroke()}for(let y=GY;y>=GY-300;y-=100){b.beginPath();b.moveTo(760,y);b.lineTo(1000,y);b.stroke()}
- // ground
- gr=b.createLinearGradient(0,GY,0,H);gr.addColorStop(0,'#3a3f4a');gr.addColorStop(1,'#1a1d24');b.fillStyle=gr;b.fillRect(0,GY,W,H-GY);
- b.fillStyle='#e0b43a';for(let x=0;x<W;x+=120)b.fillRect(x,GY+22,60,6);
-})();
-function plainBg(c){g.fillStyle=c||'#0c1220';g.fillRect(0,0,W,H);const gr=g.createRadialGradient(W/2,H*.4,100,W/2,H*.4,1100);gr.addColorStop(0,'rgba(74,163,255,.10)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,0,W,H)}
-// ---------- worker
-const GRAB={stoop:{th:85,hh:78},squat:{th:38,hh:45}};
-function pose(mode,c,time){
- let th=0,hh=90,hx=0,hand=[6,93],carry=false;const sh=(t,h,x)=>[x+TR*Math.sin(R(t)),h+TR*Math.cos(R(t))];
- if(mode==='stand'){th=Math.sin(time*2)*.5}
- else{const G=GRAB[mode],gx=XB-6-TR*Math.sin(R(G.th)),gp=[XB,HY],st=sh(0,90,0),ch=[26,100];
-  if(c<.3){const k=ease(c/.3);th=lerp(0,G.th,k);hh=lerp(90,G.hh,k);hx=lerp(0,gx,k);hand=[lerp(st[0]+6,gp[0],k),lerp(st[1]-52,gp[1],k)]}
-  else if(c<.42){th=G.th;hh=G.hh;hx=gx;hand=gp}
-  else if(c<.8){const k=ease((c-.42)/.38);th=lerp(G.th,0,k);hh=lerp(G.hh,90,k);hx=lerp(gx,0,k);hand=[lerp(gp[0],ch[0],k),lerp(gp[1],ch[1],k)];carry=true}
-  else{th=0;hh=90;hx=0;hand=ch;carry=true}
-  if(c>.05&&c<.8)th+=Math.sin(time*13)*.6}
- return{th,hh,hx,hand,carry,c}}
-function limb(a,b,w,col,edge){g.lineCap='round';g.strokeStyle=edge||'#0a0f1a';g.lineWidth=(w+2.2)*S;g.beginPath();g.moveTo(X(a[0]),Y(a[1]));g.lineTo(X(b[0]),Y(b[1]));g.stroke();g.strokeStyle=col;g.lineWidth=w*S;g.beginPath();g.moveTo(X(a[0]),Y(a[1]));g.lineTo(X(b[0]),Y(b[1]));g.stroke()}
-function worker(p,o){
- const hip=[p.hx,p.hh],tu=[Math.sin(R(p.th)),Math.cos(R(p.th))],sho=[hip[0]+TR*tu[0],hip[1]+TR*tu[1]];
- const leg=ik(hip,[0,0],L,L,1),arm=ik(sho,p.hand,AU,AF,-1),over=o.over;
- // ground shadow
- g.fillStyle='rgba(0,0,0,.35)';g.beginPath();g.ellipse(X(5),GY+6,70*S/3.2,9,0,0,7);g.fill();
- // box behind body
- if(o.boxA>0){const bc=p.carry&&p.c<.92?[arm.e[0]+BX/2-2,arm.e[1]-2]:[XB+BX/2,BH/2];g.globalAlpha=o.boxA;
-  g.fillStyle='#c0914f';g.fillRect(X(bc[0]-BX/2),Y(bc[1]+BH/2),BX*S,BH*S);g.fillStyle='#a67a3d';g.fillRect(X(bc[0]-BX/2),Y(bc[1]+BH/2),BX*S,5*S);
-  g.strokeStyle='#6e4d1f';g.lineWidth=3;g.strokeRect(X(bc[0]-BX/2),Y(bc[1]+BH/2),BX*S,BH*S);g.fillStyle='#e8d9b5';g.fillRect(X(bc[0]-6),Y(bc[1]+BH/2),12*S,BH*S);g.globalAlpha=1}
- // far arm, legs
- limb(sho,arm.j,8.5,'#7a4d0a');limb(arm.j,arm.e,7.5,'#b88a5e');
- limb(hip,leg.j,13,'#2f4660');limb(leg.j,[0,4],11,'#2f4660');
- g.fillStyle='#14181f';g.beginPath();g.roundRect(X(-8),Y(5),26*S,5*S,8);g.fill();
- // torso vest
- const vc=over?'#ff5a4d':'#ff9f1c';limb(hip,sho,17,vc);
- const nx=tu[1],ny=-tu[0];[.3,.62].forEach(k=>{const c=[lerp(hip[0],sho[0],k),lerp(hip[1],sho[1],k)];limb([c[0]-nx*8,c[1]-ny*8],[c[0]+nx*8,c[1]+ny*8],2.4,'#f4f1c9','rgba(0,0,0,0)')});
- // head + hard hat
- const hd=[sho[0]+14*tu[0],sho[1]+14*tu[1]];g.fillStyle='#e9b98a';g.beginPath();g.arc(X(hd[0]),Y(hd[1]),9*S,0,7);g.fill();
- g.fillStyle='#1b1b1b';g.beginPath();g.arc(X(hd[0]+3.5*Math.cos(R(p.th))),Y(hd[1]-3.5*Math.sin(R(p.th))+1),1.1*S,0,7);g.fill();
- g.save();g.translate(X(hd[0]),Y(hd[1]));g.rotate(R(p.th));g.fillStyle='#ffd23f';g.beginPath();g.arc(0,-.5*S,10*S,Math.PI,0);g.fill();g.fillRect(-.5*S,-1.6*S,14*S,2.2*S);g.restore();
- // front arm
- limb(sho,arm.j,9.5,'#ff9f1c');limb(arm.j,arm.e,8,'#e9b98a');
- // nodes
- let bn=null,wn=null;
- if(o.dev){const f=[tu[1],-tu[0]];bn=[hip[0]+tu[0]*3+f[0]*10,hip[1]+tu[1]*3+f[1]*10];
-  g.save();g.translate(X(bn[0]),Y(bn[1]));g.rotate(R(p.th));g.fillStyle='#1d6fd1';g.beginPath();g.roundRect(-4.5*S,-8.5*S,9*S,17*S,6);g.fill();g.strokeStyle='#8ec5ff';g.lineWidth=2;g.stroke();
-  g.fillStyle=over?'#ff4d4f':'#3ecf8e';g.beginPath();g.arc(0,-5*S,1.6*S,0,7);g.fill();g.restore();
-  wn=[lerp(arm.j[0],arm.e[0],.78),lerp(arm.j[1],arm.e[1],.78)];
-  const sx=o.buzz?(Math.random()-.5)*7:0,sy=o.buzz?(Math.random()-.5)*7:0;
-  g.save();g.translate(X(wn[0])+sx,Y(wn[1])+sy);const ang=Math.atan2(-(arm.e[1]-arm.j[1]),arm.e[0]-arm.j[0]);g.rotate(ang);g.fillStyle=o.buzz?'#ff4d4f':'#1d6fd1';g.beginPath();g.roundRect(-5*S,-4.8*S,10*S,9.6*S,6);g.fill();g.strokeStyle='#8ec5ff';g.lineWidth=2;g.stroke();g.restore();
-  if(o.buzz){for(let i=0;i<3;i++){const ph=((o.time*1.6+i/3)%1);g.strokeStyle='rgba(255,77,79,'+(1-ph)+')';g.lineWidth=4;g.beginPath();g.arc(X(wn[0]),Y(wn[1]),(18+ph*70),0,7);g.stroke()}}
-  g.strokeStyle=over?'rgba(255,77,79,.9)':'rgba(120,190,255,.8)';g.setLineDash([10,9]);g.lineWidth=2.5;g.beginPath();g.moveTo(X(bn[0]),Y(bn[1]));g.quadraticCurveTo((X(bn[0])+X(wn[0]))/2-40,(Y(bn[1])+Y(wn[1]))/2-60,X(wn[0]),Y(wn[1]));g.stroke();g.setLineDash([]);
-  const k=(o.time*1.1)%1,qx=(X(bn[0])+X(wn[0]))/2-40,qy=(Y(bn[1])+Y(wn[1]))/2-60,u=1-k;
-  g.fillStyle=over?'#ff8a8a':'#bfe0ff';g.beginPath();g.arc(u*u*X(bn[0])+2*u*k*qx+k*k*X(wn[0]),u*u*Y(bn[1])+2*u*k*qy+k*k*Y(wn[1]),6,0,7);g.fill()}
- return{hip,sho,bn,wn,tu}}
-function dial(cx,cy,r,a,over){g.lineCap='butt';const A=d=>Math.PI+R(d/90*180);
- g.lineWidth=30;g.strokeStyle='#2fc487';g.beginPath();g.arc(cx,cy,r,A(0),A(THR));g.stroke();g.strokeStyle='#ff4d4f';g.beginPath();g.arc(cx,cy,r,A(THR),A(90));g.stroke();
- g.lineWidth=2;g.strokeStyle='#fff';[0,45,90].forEach(d=>{g.beginPath();g.moveTo(cx+Math.cos(A(d))*(r-24),cy+Math.sin(A(d))*(r-24));g.lineTo(cx+Math.cos(A(d))*(r+24),cy+Math.sin(A(d))*(r+24));g.stroke()});
- txt('0°',cx-r-8,cy+30,22,'#9fb2c8','center');txt('45°',cx+Math.cos(A(45))*(r+50),cy+Math.sin(A(45))*(r+50),22,'#ff8a8a','center','700');txt('90°',cx+r+8,cy+30,22,'#9fb2c8','center');
- const na=A(cl(a,0,90));g.strokeStyle='#fff';g.lineWidth=7;g.lineCap='round';g.beginPath();g.moveTo(cx,cy);g.lineTo(cx+Math.cos(na)*(r-18),cy+Math.sin(na)*(r-18));g.stroke();g.fillStyle='#fff';g.beginPath();g.arc(cx,cy,12,0,7);g.fill();
- txt(Math.round(a)+'°',cx,cy+115,110,over?'#ff5a4d':'#3ecf8e','center','700');txt('มุมก้มลำตัว',cx,cy+155,28,'#9fb2c8','center')}
-function title(t,sub){txt(t,80,100,52,'#fff','left','700');if(sub)txt(sub,80,146,26,'#9fb2c8')}
-// ---------- scene renderers (t = seconds in scene)
-let warn=0,wasOver=false,evT=-9;
-function liftScene(t,mode,tt,sub){
- g.drawImage(bg,0,0);title(tt,sub);
- const cyc=9,c=(t/cyc)%1;if(t<.05){warn=0;wasOver=false;evT=-9}
- const p=pose(mode,c,t),ang=Math.max(0,p.th),over=ang>THR;
- if(over&&!wasOver){warn++;evT=t}if(!over)wasOver=false;else wasOver=true;
- const e=t-evT,buzz=over&&e<1.5&&(e%.5)<.27;
- const boxA=c>.92?1-(c-.92)/.08:c<.05?c/.05:1;
- worker(p,{dev:true,over,buzz,boxA,time:t});
- // right panel
- g.fillStyle='rgba(8,12,22,.78)';rr(1060,190,780,640,28,'rgba(8,12,22,.78)','rgba(120,160,210,.25)',2);
- dial(1450,470,200,ang,over);
- txt('เตือนแล้ว '+warn+' ครั้ง',1120,760,40,warn?'#ffb020':'#9fb2c8','left','700');
- const st=over?(buzz?'โหนดสั่น! (3 พัลส์)':'เกิน '+THR+'°'):(mode==='squat'?'อยู่ในเกณฑ์ ไม่เตือน':'ยืน/ยังไม่เกินเกณฑ์');
- txt(st,1840-40,760,36,over?'#ff5a4d':'#3ecf8e','right','700');
- txt('เกณฑ์เริ่มต้น 45° (ปรับได้) · ภาพจำลอง',1450,805,22,'#7f93a8','center');
-}
-const DRAW=[
-// 0 title
-(t)=>{plainBg('#08101e');
- for(let i=0;i<40;i++){const a=(t*.2+i*.37)%1;g.fillStyle='rgba(120,190,255,'+(.35*(1-a))+')';g.beginPath();g.arc((i*251)%W,H-a*H,3+(i%4),0,7);g.fill()}
- const k=ease(t/1.2);g.globalAlpha=k;
- // logo glyph: angle wedge
- g.strokeStyle='#4aa3ff';g.lineWidth=14;g.lineCap='round';g.beginPath();g.moveTo(760,380);g.lineTo(760,230);g.moveTo(760,380);g.lineTo(900,330);g.stroke();
- g.strokeStyle='#ff9f1c';g.lineWidth=8;g.beginPath();g.arc(760,380,80,-Math.PI/2,-Math.PI/2+R(20+25*ease((t-.8)/1.5)));g.stroke();
- txt('Lift Belt',980,360,150,'#fff','left','700');
- txt('อุปกรณ์เตือนมุมก้มลำตัวขณะยกของ',W/2,520,48,'#bfe0ff','center');
- txt('เพื่อสร้างความตระหนักรู้ในผู้ยกของ · ต้นแบบ (ไม่ใช่อุปกรณ์ทางการแพทย์)',W/2,590,28,'#7f93a8','center');
- txt('โครงงาน · '+ 'Login Learning',W/2,900,26,'#5f7186','center');g.globalAlpha=1},
-// 1 problem
-(t)=>{g.drawImage(bg,0,0);title('ปัญหา: ก้มหลังยกของซ้ำ ๆ โดยไม่รู้ตัว');
- const c=(t/9)%1,p=pose('stoop',c,t);const boxA=c>.92?1-(c-.92)/.08:c<.05?c/.05:1;
- const w=worker(p,{dev:false,over:p.th>THR,boxA,time:t});
- // spine inset
- rr(1060,190,780,640,28,'rgba(8,12,22,.78)','rgba(120,160,210,.25)',2);
- const a=Math.max(0,p.th),sx=1290,sy=800;
- let vx=sx,vy=sy;for(let i=0;i<12;i++){const ang=R(a)*(i/11)*.9;const low=i<4;g.fillStyle=low?`hsl(${Math.max(0,125-a*1.35)},75%,55%)`:'#9fb2c8';g.beginPath();g.roundRect(vx-17,vy-8,34,16,6);g.fill();
-  if(low&&a>45){g.strokeStyle='rgba(255,90,70,'+cl((a-45)/40)+')';g.lineWidth=3;g.beginPath();g.arc(vx,vy,26+((t*30)%16),0,7);g.stroke()}
-  vx+=Math.sin(ang)*19;vy-=Math.cos(ang)*19}
- txt('ยิ่งก้มมาก ภาระที่หลังส่วนล่างยิ่งสูง (ภาพประกอบเชิงแนวคิด)',1450,815,24,'#e8eef5','center');
- // fact counter
- const k=ease((t-3)/3);txt(Math.round(25*k)+'%',1120,350,130,'#ffb020','left','700');
- wrap('ของเวลางานอยู่ในท่าก้มเกิน 20° (คนงานก่อสร้าง 15 คน)',1120,400,600,30,'#e8eef5',40);
- txt('ที่มา: Porta และคณะ, Ergonomics (ผลจากการสังเกตกลุ่มเล็ก)',1120,490,20,'#7f93a8')},
-// 2 device
-(t)=>{plainBg();title('อุปกรณ์ 2 ชิ้น ทำงานร่วมกันผ่าน BLE','แบบ CAD ที่ออกแบบไว้ (ยังไม่ได้พิมพ์/ประกอบจริง)');
- const k=ease(t/1.2);g.globalAlpha=k;rr(80,200,1000,750,28,'#f3f5f8');
- if(img.complete&&img.naturalWidth)g.drawImage(img,90,210,980,735);g.globalAlpha=1;
- const items=[['โหนดเอว','คลิปติดเข็มขัด · XIAO ESP32-C3 + IMU MPU6050 + แบตลิเธียม + มอเตอร์สั่น + ปุ่มปรับศูนย์',3.2,'#4aa3ff'],['โหนดข้อมือ','สายรัดข้อมือ · มอเตอร์สั่นเตือนตามคำสั่งจากโหนดเอว (เฟิร์มแวร์ยังไม่เสร็จ)',6,'#ff9f1c'],['เกณฑ์เตือน','เริ่มต้น 45° ปรับได้ · สั่นสั้น 3 พัลส์ ถ้าเตือนซ้ำ >2 ครั้งใน 2 นาที → สั่นยาว 3 วินาที',8.5,'#3ecf8e']];
- items.forEach((it,i)=>{const a=ease((t-it[2])/.7);if(a<=0)return;const y=240+i*215;g.globalAlpha=a;rr(1120,y,720,190,22,'rgba(18,28,46,.95)',it[3],3);
-  txt(it[0],1150,y+55,38,it[3],'left','700');wrap(it[1],1150,y+100,660,26,'#e8eef5',36);g.globalAlpha=1});
- // callout dots on image
- if(t>3.2){const a=.6+.4*Math.sin(t*5);g.strokeStyle='#1d6fd1';g.lineWidth=5;g.globalAlpha=a;g.beginPath();g.arc(760,420,95,0,7);g.stroke();g.globalAlpha=1}
- if(t>6){const a=.6+.4*Math.sin(t*5);g.strokeStyle='#e07b00';g.lineWidth=5;g.globalAlpha=a;g.beginPath();g.arc(470,560,120,0,7);g.stroke();g.globalAlpha=1}},
-// 3 how it works
-(t)=>{plainBg();title('ทำงานอย่างไร','จากเซนเซอร์ → มุม → สั่นเตือน → ส่งข้อมูลขึ้นเว็บ');
- const bx=[['เซนเซอร์ IMU','MPU6050 วัดแรงโน้มถ่วง 25 ครั้ง/วินาที'],['คำนวณมุม','เวกเตอร์ปัจจุบัน เทียบ ท่ายืนตรงที่ปรับศูนย์'],['เฉลี่ย 0.2 วิ','ลดสัญญาณสั่นไหว'],['มุม > เกณฑ์ ?','เริ่มต้น 45° ปรับได้'],['มอเตอร์สั่น','สั้น 3 พัลส์ / ยาว 3 วินาที']];
- const x0=90,bw=290,gap=50,by=330,bh=190,act=Math.floor(t/1.7)%6;
- bx.forEach((b,i)=>{const x=x0+i*(bw+gap),on=act===i;const col=on?(i===4?'#ff5a4d':'#4aa3ff'):'#2a3a52';
-  rr(x,by,bw,bh,22,on?'rgba(30,60,100,.95)':'rgba(16,26,42,.95)',col,on?5:2);txt(b[0],x+bw/2,by+75,34,'#fff','center','700');wrap(b[1],x+16,by+120,bw-32,22,'#9fb2c8',30);
-  if(i<4){const ax=x+bw+8;g.strokeStyle=act>i?'#4aa3ff':'#2a3a52';g.lineWidth=6;g.beginPath();g.moveTo(ax,by+bh/2);g.lineTo(ax+gap-16,by+bh/2);g.stroke();g.fillStyle=g.strokeStyle;g.beginPath();g.moveTo(ax+gap-8,by+bh/2);g.lineTo(ax+gap-22,by+bh/2-10);g.lineTo(ax+gap-22,by+bh/2+10);g.fill();
-   if(act===i+1||(act===i&&false)){}}});
- const pk=(t*.6)%5;const px=x0+pk*(bw+gap)+bw/2;g.fillStyle='#9bd1ff';g.beginPath();g.arc(px,by+bh+30,10,0,7);g.fill();
- // BLE branch
- const sx=x0+3*(bw+gap)+bw/2,sy=by+bh;g.strokeStyle='#4aa3ff';g.setLineDash([12,10]);g.lineWidth=4;g.beginPath();g.moveTo(x0+1*(bw+gap)+bw/2,sy);g.lineTo(x0+1*(bw+gap)+bw/2,sy+120);g.lineTo(sx+bw,sy+120);g.stroke();g.setLineDash([]);
- rr(x0+1*(bw+gap)+bw/2-200,sy+120-36,400,72,18,'#10223a','#4aa3ff',3);txt('BLE ส่งมุมขึ้นหน้าเว็บ 5 ครั้ง/วินาที',x0+1*(bw+gap)+bw/2,sy+128,26,'#bfe0ff','center','700');
- rr(sx+bw-120,sy+84,300,72,18,'#10223a','#4aa3ff',3);txt('หน้าเว็บ / โหนดข้อมือ',sx+bw+30,sy+130,26,'#bfe0ff','center','700');
- rr(90,745,1740,205,22,'rgba(16,26,42,.9)','#2a3a52',2);
- wrap('วัดการเอียงของเข็มขัดจากท่ายืนตรงที่ปรับศูนย์ (กดปุ่มค้าง 3 วินาที) ไม่ต้องรู้ทิศการติดตั้ง · ย่อเข่าหลังตรง มุมเอวแทบไม่เปลี่ยน จึงไม่เตือน',120,810,1680,26,'#e8eef5',36);wrap('ลดเตือนผิด: ต้องก้มค้างเกิน 0.8 วินาที หรือเลือกโหมดเตือนตอนลุกขึ้นหลังก้มลึก · ข้อจำกัด: ตัวเอววัดมุมอย่างเดียว ก้มค้างโดยไม่ยกของก็ยังเตือนได้ — แผนต่อไป: ให้โหนดข้อมือตรวจว่ากำลังยกของ (ยังไม่ได้ทำ/ยังไม่ทดสอบกับคนจริง)',120,885,1680,24,'#ffb7ad',34)},
-// 4 wrong lift
-(t)=>liftScene(t,'stoop','ยกผิดท่า: ก้มหลัง → เกินเกณฑ์ → สั่นเตือน'),
-// 5 right lift
-(t)=>liftScene(t,'squat','ยกถูกท่า: ย่อเข่า หลังตรง → ไม่เตือน'),
-// 6 web
-(t)=>{plainBg();title('ดูมุมแบบเรียลไทม์ผ่านเว็บ','Web Bluetooth (Chrome/Edge บน Android และคอมพิวเตอร์) · ภาพตัวอย่างข้อมูลจำลอง');
- const px=560,py=190,pw=800,ph=800;rr(px,py,pw,ph,50,'#05080e','#3a4a60',6);rr(px+24,py+24,pw-48,ph-48,34,'#10151c');
- const a=28+30*Math.sin(t/2)+8*Math.sin(t*1.7),over=a>THR;
- txt('Lift Belt – มุมก้มลำตัว',px+60,py+100,34,'#fff','left','700');
- txt(Math.round(a),px+pw/2,py+260,130,over?'#ff5a4d':'#3ecf8e','center','700');txt('องศา',px+pw/2,py+300,26,'#9fb2c8','center');
- // chart
- const cx0=px+60,cy0=py+340,cw=pw-120,chh=220;rr(cx0,cy0,cw,chh,16,'#1a222d');
- const ty=cy0+chh-(THR/90)*chh;g.strokeStyle='#ff4d4f';g.setLineDash([8,6]);g.lineWidth=2;g.beginPath();g.moveTo(cx0,ty);g.lineTo(cx0+cw,ty);g.stroke();g.setLineDash([]);
- g.strokeStyle='#4aa3ff';g.lineWidth=4;g.beginPath();for(let i=0;i<=120;i++){const tt=t-(120-i)*.1,v=cl(28+30*Math.sin(tt/2)+8*Math.sin(tt*1.7),0,90),x=cx0+i/120*cw,y=cy0+chh-(v/90)*chh;i?g.lineTo(x,y):g.moveTo(x,y)}g.stroke();
- rr(px+60,py+590,cw,70,16,'#2a3645');txt('เกณฑ์เตือน '+THR+'°',px+90,py+636,28,'#e8eef5');rr(px+pw-340,py+600,260,50,25,'#4aa3ff');
- [['ปรับศูนย์',0],['ทดสอบสั่น',1],['บันทึก CSV',2]].forEach(([s,i])=>{rr(px+60+i*(cw/3+8),py+690,cw/3-8,64,14,'#2a3645');txt(s,px+60+i*(cw/3+8)+(cw/3-8)/2,py+732,26,'#e8eef5','center','700')});
- const feats=['มุมเรียลไทม์ + กราฟย้อนหลัง 60 วินาที','ปรับเกณฑ์เตือน 20–80° แล้วบันทึกลงอุปกรณ์','ปรับศูนย์ / ทดสอบสั่นสั้น–ยาว','บันทึกข้อมูลเป็น CSV เพื่อนำไปวิเคราะห์'];
- feats.forEach((f,i)=>{const a2=ease((t-1-i*1.6)/.6);g.globalAlpha=a2;g.fillStyle='#4aa3ff';g.beginPath();g.arc(1450,280+i*130,10,0,7);g.fill();wrap(f,1480,290+i*130,400,28,'#e8eef5',38);g.globalAlpha=1})},
-// 7 evidence
-(t)=>{plainBg();title('หลักฐานจากงานวิจัย','Lim & Yang, Applied Ergonomics 110 (2023) 104019 · NIOSH/CDC');
- const cards=[['14 คน','ผู้เข้าร่วมชาย (มือใหม่ ไม่ใช่คนงานจริง) งานจำลองก่อสร้าง','#4aa3ff'],['45°','เกณฑ์เตือนที่ใช้: ค่าเฉลี่ยมุมก้มลำตัว → สั่นสั้น 3 พัลส์','#ff9f1c'],['ลดลง','มุมก้มสูงสุด (P95/P90) ลดลงในงานยก–วางและตักดิน ไม่เห็นผลในงานผูกเหล็ก','#3ecf8e'],['ข้อมือ','ผู้เข้าร่วมชอบสัญญาณสั่นที่ข้อมือมากที่สุด','#c792ea']];
- cards.forEach((c,i)=>{const a=ease((t-.6-i*1.4)/.6);if(a<=0)return;const x=80+(i%2)*890,y=210+Math.floor(i/2)*270;g.globalAlpha=a;rr(x,y,850,240,26,'rgba(18,28,46,.95)',c[2],3);txt(c[0],x+40,y+100,76,c[2],'left','700');wrap(c[1],x+40,y+160,770,28,'#e8eef5',38);g.globalAlpha=1});
- const a=ease((t-7)/.8);g.globalAlpha=a;rr(80,770,1760,180,26,'rgba(60,20,20,.55)','#ff7a6e',3);txt('ข้อจำกัดที่ต้องบอก',120,825,32,'#ff9a8f','left','700');
- wrap('เป็นผลทันทีในห้องทดลอง ไม่ได้วัดการบาดเจ็บหรือผลระยะยาว · ทบทวนเชิงระบบ 2024 ชี้ว่าหลักฐานของอุปกรณ์เตือนแบบสวมใส่ยังน้อยและคุณภาพต่ำ → โครงงานนี้จึงไม่อ้างว่าป้องกันโรค',120,870,1680,26,'#ffd9d4',37);g.globalAlpha=1},
-// 8 closing
-(t)=>{plainBg('#08101e');txt('สรุป',W/2,170,64,'#fff','center','700');
- const pts=[['รู้ตัวทันที','ข้อมือ/เอวสั่นเมื่อก้มเกินเกณฑ์ ช่วยปรับท่าเอง'],['ดูข้อมูลได้','เว็บแสดงมุมเรียลไทม์ ปรับเกณฑ์ บันทึก CSV'],['ซ่อมสร้างเองได้','CAD พิมพ์ 3D + PCB หน้าเดียว + เฟิร์มแวร์ + BOM หาซื้อใน Shopee']];
- pts.forEach((p,i)=>{const a=ease((t-.6-i*1.2)/.6);g.globalAlpha=a;rr(160+i*580,250,540,260,26,'rgba(18,28,46,.95)','#4aa3ff',3);txt(p[0],160+i*580+30,330,40,'#4aa3ff','left','700');wrap(p[1],160+i*580+30,385,480,26,'#e8eef5',37);g.globalAlpha=1});
- const a=ease((t-4.4)/.8);g.globalAlpha=a;rr(160,560,1600,300,26,'rgba(18,28,46,.95)','#ff9f1c',3);txt('ขั้นต่อไป',200,625,36,'#ff9f1c','left','700');
- wrap('ทดสอบเฟิร์มแวร์กับบอร์ดจริง · เฟิร์มแวร์โหนดข้อมือ · วัดกระแสและอายุแบต · ทดสอบกับผู้ใช้จริงตามจริยธรรม · ยืนยันตาราง ISO 11226 จากฉบับทางการ',200,680,1520,28,'#e8eef5',42);g.globalAlpha=1;
- txt('เป็นเครื่องมือสร้างความตระหนักรู้ ไม่ใช่อุปกรณ์ทางการแพทย์ ไม่อ้างการป้องกันหรือวินิจฉัยโรค',W/2,940,28,'#9fb2c8','center')}
-];
-// ---------- engine
-let playing=true,sc=0,lt=0,last=performance.now(),narr=false;
-function subtitle(){const s=SC[sc].say;g.fillStyle='rgba(0,0,0,.62)';g.fillRect(0,975,W,105);g.font='500 34px '+FONT;
- let lines=[],ln='';for(const ch of s){if(g.measureText(ln+ch).width>1740&&ln){lines.push(ln);ln=''}ln+=ch}lines.push(ln);
- lines.forEach((l,i)=>txt(l,W/2,lines.length>1?1018+i*44-22:1038,34,'#fff','center','500'))}
-function setScene(i){speechSynthesis&&speechSynthesis.cancel();sc=(i+SC.length)%SC.length;lt=0;warn=0;wasOver=false;evT=-9;btns();if(narr)speak()}
-function speak(){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(SC[sc].say);u.lang='th-TH';u.rate=1.0;speechSynthesis.speak(u)}catch(e){}}
-function btns(){const b=document.getElementById('sb');b.innerHTML='';SC.forEach((q,i)=>{const x=document.createElement('button');x.textContent=(i+1)+'. '+q.n;if(i===sc)x.className='on';x.onclick=()=>setScene(i);b.appendChild(x)})}
-function frame(n){const dt=Math.min(100,n-last);last=n;if(playing){lt+=dt/1000;if(lt>=SC[sc].d)setScene(sc+1)}
- try{DRAW[sc](lt);subtitle();
-  g.fillStyle='rgba(255,255,255,.12)';g.fillRect(0,0,W,6);const tot=SC.reduce((a,b)=>a+b.d,0);let acc=0;for(let i=0;i<sc;i++)acc+=SC[i].d;g.fillStyle='#4aa3ff';g.fillRect(0,0,W*(acc+lt)/tot,6)}
- catch(err){g.fillStyle='#f55';g.font='20px sans-serif';g.fillText('ERR '+err.message+' | '+(err.stack||'').split('\n')[1],20,300)}
- requestAnimationFrame(frame)}
-document.getElementById('pp').onclick=()=>{playing=!playing;document.getElementById('pp').textContent=playing?'⏸':'▶';if(!playing)speechSynthesis&&speechSynthesis.pause();else speechSynthesis&&speechSynthesis.resume()};
-document.getElementById('fs').onclick=()=>document.getElementById('w').requestFullscreen&&document.getElementById('w').requestFullscreen();
-document.getElementById('nv').onclick=()=>{narr=!narr;document.getElementById('nv').textContent='🔈 เสียงบรรยาย: '+(narr?'เปิด':'ปิด');if(narr)speak();else speechSynthesis.cancel()};
-addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();document.getElementById('pp').click()}else if(e.key==='ArrowRight')setScene(sc+1);else if(e.key==='ArrowLeft')setScene(sc-1);else if(e.key==='f'||e.key==='F')document.getElementById('fs').click();else if(e.key==='n'||e.key==='N')document.getElementById('nv').click()});
-btns();const HP=new URLSearchParams(location.hash.slice(1));if(HP.has('s')){sc=+HP.get('s');lt=+HP.get('t')||0;playing=false}
-requestAnimationFrame(frame);
-</script></body></html>
+:root{--bg:#0c1220;--card:#141d2e;--line:#26364f;--tx:#e8eef5;--mut:#93a6bb;--ac:#4aa3ff;--ok:#3ecf8e;--warn:#ffb020;--bad:#ff5a4d}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--tx);font:17px/1.7 "Noto Sans Thai","Sarabun",system-ui,sans-serif}
+a{color:var(--ac)}header{position:sticky;top:0;z-index:5;background:rgba(12,18,32,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+nav{max-width:1080px;margin:auto;display:flex;gap:4px;padding:10px 16px;overflow-x:auto;align-items:center;white-space:nowrap}
+nav b{margin-right:12px}nav a{color:var(--mut);text-decoration:none;padding:6px 12px;border-radius:8px;font-size:15px}nav a:hover{background:#1c2940;color:var(--tx)}
+main{max-width:1080px;margin:auto;padding:0 16px 80px}section{padding:56px 0 8px}
+h1{font-size:clamp(34px,6vw,60px);line-height:1.15;margin:0 0 12px}h2{font-size:30px;margin:0 0 6px}h3{font-size:19px;margin:22px 0 6px}
+.lead{color:#c3d1e0;font-size:19px;max-width:760px}.tag{color:var(--ac);font-weight:700;font-size:14px;letter-spacing:.04em}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));margin-top:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}.card h3{margin-top:0}
+.big{font-size:44px;font-weight:700;line-height:1.1}.mut{color:var(--mut);font-size:15px}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0}.btn{display:inline-block;background:var(--ac);color:#04121f;font-weight:700;padding:11px 18px;border-radius:12px;text-decoration:none}
+.btn.g{background:#22324a;color:var(--tx)}
+.note{border-left:4px solid var(--warn);background:#2a2412;padding:12px 16px;border-radius:8px;margin:16px 0;color:#ffe3a3}
+.bad{border-left-color:var(--bad);background:#2d1816;color:#ffd4cf}
+table{width:100%;border-collapse:collapse;font-size:15px;margin-top:10px}th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}th{color:var(--mut);font-weight:600}
+code,pre{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px}pre{background:#0a0f1a;border:1px solid var(--line);border-radius:12px;padding:14px;overflow:auto;line-height:1.55}
+code{background:#0a0f1a;padding:1px 6px;border-radius:6px}
+.badge{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;border:1px solid var(--line);color:var(--mut);margin-left:6px;white-space:nowrap}
+.v-ok{color:var(--ok);border-color:#1f6b4c}.v-no{color:var(--warn);border-color:#6b5316}
+ol.refs{padding-left:22px}ol.refs li{margin:12px 0}
+svg text{font-family:"Noto Sans Thai",system-ui,sans-serif}
+footer{border-top:1px solid var(--line);color:var(--mut);padding:24px 16px;text-align:center;font-size:14px}
+</style></head><body>
+<header><nav><b>Lift Belt</b><a href="#problem">ปัญหา</a><a href="#benefit">ประโยชน์</a><a href="#principle">หลักการ</a><a href="#software">ซอฟต์แวร์</a><a href="#limits">ข้อจำกัด</a><a href="#refs">อ้างอิง</a><a href="app.html">เปิดแอป</a></nav></header>
+<main>
+<section style="padding-top:48px">
+<div class="tag">ต้นแบบเพื่อสร้างความตระหนักรู้ · ไม่ใช่อุปกรณ์ทางการแพทย์</div>
+<h1>Lift Belt<br><span style="color:var(--ac)">เข็มขัดเตือนมุมก้มลำตัว</span></h1>
+<p class="lead">คลิปติดเข็มขัดระดับเอววัดการเอียงของลำตัว แล้วสั่นเตือนเมื่อก้มลึกเกินเกณฑ์ เพื่อให้ผู้ยกของรู้ตัวทันที และดูมุมแบบเรียลไทม์ผ่านเว็บบนมือถือหรือคอมพิวเตอร์</p>
+<div class="btns"><a class="btn" href="app.html">ลองแอป (มีโหมดทดลองไม่ต้องมีอุปกรณ์)</a><a class="btn g" href="animation.html">ดูอนิเมชันนำเสนอ</a><a class="btn g" href="#refs">เอกสารอ้างอิง</a></div>
+<div class="note"><b>สถานะจริงของโครงงาน:</b> ออกแบบ CAD และ PCB เสร็จ เฟิร์มแวร์โหนดเอวคอมไพล์ผ่าน แต่ <b>ยังไม่ได้ประกอบ ทดสอบกับบอร์ดจริง หรือทดสอบกับผู้ใช้</b> ตัวเลขผลลัพธ์ในหน้านี้ทั้งหมดมาจากงานวิจัยของผู้อื่น ไม่ใช่ผลของอุปกรณ์นี้</div>
+</section>
+
+<section id="problem"><div class="tag">1 · ปัญหา</div><h2>การยกของเป็นงานหนักที่สะสมเงียบ ๆ</h2>
+<p class="lead">อาการปวดหลังส่วนล่างเป็นปัญหาสุขภาพระดับโลก และปัจจัยด้านอาชีพเป็นหนึ่งในปัจจัยเสี่ยงที่ถูกนับรวมในการประเมิน</p>
+<div class="grid">
+<div class="card"><div class="big" style="color:var(--warn)">619 ล้านคน</div><p>ทั่วโลกมีอาการปวดหลังส่วนล่างในปี 2020 (ช่วงความไม่แน่นอน 95%: 554–694 ล้านคน) คาดว่าถึง 843 ล้านคนในปี 2050 <a href="#r1">[1]</a></p></div>
+<div class="card"><div class="big" style="color:var(--warn)">≈25%</div><p>ของเวลางานของคนงานก่อสร้าง 15 คนอยู่ในท่าก้มลำตัวเกิน 20° (กลุ่มตัวอย่างเล็ก) <a href="#r3">[3]</a></p></div>
+<div class="card"><div class="big" style="color:var(--warn)">57.7%</div><p>ของแรงงานหญิงในงานก่อสร้างไทยที่ศึกษารายงานอาการระบบกล้ามเนื้อและกระดูก ส่วนที่พบบ่อยคือหลังส่วนล่างและไหล่ ปัจจัยสัมพันธ์รวมท่าทางที่ไม่เหมาะสม <a href="#r6">[6]</a></p></div>
+</div>
+<p class="mut">ตัวเลขข้างต้นเป็นสถิติ/การสำรวจกลุ่มเฉพาะ ไม่ใช่ความเสี่ยงของคนทุกคน และไม่ได้พิสูจน์ว่าการก้มหลังเป็นสาเหตุโดยตรง ปัญหาที่เราตั้งโจทย์คือ <b>ผู้ยกของมักไม่รู้ว่าตัวเองก้มลึกแค่ไหนขณะทำงาน</b> (ข้อนี้เป็นสมมติฐานของโครงงาน ยังต้องยืนยันกับผู้ใช้จริง — USER_UNVALIDATED)</p></section>
+
+<section id="benefit"><div class="tag">2 · ประโยชน์ที่คาดหวัง</div><h2>ให้ข้อมูลทันที เพื่อให้ผู้ใช้ปรับท่าเอง</h2>
+<div class="grid">
+<div class="card"><h3>รู้ตัวทันที</h3><p>สั่นที่เอวเมื่อก้มเกินเกณฑ์ ไม่ต้องมองจอขณะยก ในการทดลองจำลองงานก่อสร้าง สัญญาณสั่นทำให้มุมก้มสูงสุดลดลงในงานยก–วางและตักดิน <a href="#r2">[2]</a></p></div>
+<div class="card"><h3>ปรับเกณฑ์ได้</h3><p>เริ่มที่ 45° ตามงานวิจัย ปรับได้ 20–80° ผ่านหน้าเว็บ และเลือกโหมดเตือนให้เหมาะกับงาน</p></div>
+<div class="card"><h3>เห็นข้อมูลของตัวเอง</h3><p>กราฟมุมย้อนหลัง 60 วินาที จำนวนครั้งที่เตือน และบันทึก CSV เพื่อใช้ฝึก/ทบทวนท่าร่วมกับผู้สอนหรือผู้ดูแลความปลอดภัย</p></div>
+<div class="card"><h3>สร้างเองได้ ราคาเข้าถึงได้</h3><p>ใช้ XIAO ESP32-C3 + IMU MPU6050 + มอเตอร์สั่น ตัวเรือนพิมพ์ 3D PCB หน้าเดียวทำเองได้ ชิ้นส่วนหาซื้อในไทย</p></div>
+</div>
+<div class="note bad"><b>สิ่งที่ไม่อ้าง:</b> ไม่อ้างว่าป้องกันการบาดเจ็บหรือโรค ไม่วินิจฉัย และไม่รับประกันผล ทบทวนเชิงระบบปี 2024 พบว่าหลักฐานของไบโอฟีดแบ็กแบบสวมใส่ยังน้อยและคุณภาพต่ำ ไม่มีผลระยะยาว <a href="#r5">[5]</a></div></section>
+
+<section id="principle"><div class="tag">3 · หลักการ</div><h2>วัดมุมลำตัวอย่างไร และทำไมใช้ 45°</h2>
+<h3>หลักการวัด</h3>
+<p>IMU วัดเวกเตอร์แรงโน้มถ่วง <b>g</b> ในกรอบของเซนเซอร์ ตอนยืนตรงผู้ใช้กดปรับศูนย์ เก็บ <b>g₀</b> ไว้ มุมก้มคือมุมระหว่างเวกเตอร์ปัจจุบันกับ g₀:</p>
+<pre>θ = arccos( ĝ · ĝ₀ )        ĝ = g / |g|   (หน่วย องศา)</pre>
+<p>ข้อดีคือไม่ต้องรู้ว่าติดเซนเซอร์ทิศไหน ข้อจำกัดคือเอียงข้างก็ถูกนับเป็นมุม และการเคลื่อนไหวเร็วทำให้แรงโน้มถ่วงปนกับความเร่งของการเคลื่อนที่ (ยังไม่ได้ใช้ไจโรช่วยกรอง)</p>
+<h3>ทำไมเกณฑ์ 45°</h3>
+<p>เป็นค่าที่ Lim &amp; Yang (NIOSH/CDC, 2023) ใช้ในการทดลอง: ค่าเฉลี่ยเคลื่อนที่ของมุมก้มลำตัวเกิน 45° → สั่นสั้น 3 พัลส์ ถ้าเกิน 2 ครั้งใน 2 นาที → สั่นยาว 3 วินาทีแล้วพัก 30 วินาที <a href="#r2">[2]</a> เราใช้เป็นค่าเริ่มต้นเท่านั้น และให้ปรับได้ มาตรฐาน ISO 11226 ใช้เกณฑ์มุมกับเวลาที่ต่างออกไป ซึ่ง <b>ยังไม่ได้ตรวจกับตารางฉบับทางการ</b> จึงยังไม่ฝังในซอฟต์แวร์ <a href="#r7">[7]</a></p>
+<h3>ทำไมวัดที่เอว ไม่ใช่หน้าอก</h3>
+<p>เข็มขัดระดับเอวอยู่ใกล้หลังส่วนล่างและเคลื่อนตามการเอียงของสะโพก–ลำตัวส่วนล่าง ระบบเตือนเอวสำหรับคนงานก่อสร้างของ CIC ฮ่องกงก็ใช้ตำแหน่งนี้ <a href="#r9">[9]</a> และงานวิจัย CDC ใช้ IMU ที่หลังเพื่อประเมินมุมลำตัว <a href="#r8">[8]</a> (ความถูกต้องของ IMU ตัวเดียวขึ้นกับงาน มีรายงานคลาดเคลื่อนตั้งแต่ราว 3° ถึงมากกว่า 15° ในงานต่างกัน)</p>
+<div class="note"><b>ก้มหลังกับย่อเข่า — อย่าสรุปเกินหลักฐาน:</b> การทบทวนงานชีวกลศาสตร์พบว่าแรงกดบนกระดูกสันหลังไม่ต่างกันอย่างชัดเจนระหว่างท่าก้ม (stoop) กับท่าย่อเข่า (squat) และไม่สนับสนุนการแนะนำท่าใดท่าหนึ่งเพื่อป้องกันปวดหลัง <a href="#r4">[4]</a> Lift Belt จึงเป็นเครื่องมือ <b>แจ้งมุมก้มของลำตัว</b> ไม่ได้ตัดสินว่าท่าไหน "ถูก" หรือ "ผิด" ทางการแพทย์</div></section>
+
+<section id="software"><div class="tag">4 · ซอฟต์แวร์</div><h2>สถาปัตยกรรมและอัลกอริทึม</h2>
+<svg viewBox="0 0 1000 250" style="width:100%;height:auto;background:#101827;border:1px solid var(--line);border-radius:16px">
+<defs><marker id="ar" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="#4aa3ff"/></marker></defs>
+<g fill="#16233a" stroke="#4aa3ff" stroke-width="2"><rect x="20" y="70" width="170" height="90" rx="14"/><rect x="250" y="70" width="190" height="90" rx="14"/><rect x="500" y="70" width="190" height="90" rx="14"/><rect x="760" y="20" width="220" height="80" rx="14"/><rect x="760" y="140" width="220" height="80" rx="14"/></g>
+<g fill="#e8eef5" font-size="19" text-anchor="middle" font-weight="700"><text x="105" y="108">MPU6050</text><text x="345" y="108">เฟิร์มแวร์ XIAO</text><text x="595" y="108">BLE GATT</text><text x="870" y="58">เว็บแอป</text><text x="870" y="178">มอเตอร์สั่น</text></g>
+<g fill="#93a6bb" font-size="15" text-anchor="middle"><text x="105" y="135">แรงโน้มถ่วง 25 Hz</text><text x="345" y="135">มุม · dwell · โหมด</text><text x="595" y="135">notify 5 Hz</text><text x="870" y="82">Web Bluetooth</text><text x="870" y="202">สั้น 3 พัลส์ / ยาว 3 วิ</text></g>
+<g stroke="#4aa3ff" stroke-width="3" fill="none" marker-end="url(#ar)"><path d="M190,115 H246"/><path d="M440,115 H496"/><path d="M690,100 L756,62"/><path d="M345,160 V190 H756"/></g>
+</svg>
+<h3>ลำดับการประมวลผลในเฟิร์มแวร์ (XIAO ESP32-C3)</h3>
+<pre>ทุก 40 ms (25 Hz):  อ่าน g → ทำให้เป็นเวกเตอร์หนึ่งหน่วย → θ = acos(ĝ·ĝ₀)
+                    เฉลี่ยเคลื่อนที่ 5 ตัวอย่าง (≈0.2 วินาที)
+ถ้า θ &gt; เกณฑ์ ค้างเกิน 0.8 วินาที  → bent = true , จดค่าสูงสุด peak
+โหมด 0 (ก้มค้าง):   เตือนเมื่อ θ &gt; เกณฑ์ และ bent
+โหมด 1 (ลุกขึ้น):    เตือนเมื่อ bent และ θ &lt; peak − 10°
+หลังเตือน: ไม่เตือนซ้ำจนกว่า θ &lt; เกณฑ์ − 5°
+สั่นสั้น 3 พัลส์ ; ถ้าเตือน &gt; 2 ครั้งใน 2 นาที → สั่นยาว 3 วินาที แล้วพัก 30 วินาที</pre>
+<p class="mut">ค่า 0.8 วินาที, 10°, 5° ผู้พัฒนาตั้งเป็นค่าเริ่มต้น <b>ยังไม่มีผลทดลองรองรับ</b> ต้องปรับกับผู้ใช้จริง</p>
+<h3>โครง BLE (GATT)</h3>
+<table><tr><th>Characteristic</th><th>สิทธิ์</th><th>ข้อมูล (little-endian)</th></tr>
+<tr><td>DATA <code>…0002…</code></td><td>notify ~5 Hz</td><td>int16 มุม×100 · u8 flags (b0 เกินเกณฑ์, b1 สั่นสั้น, b2 สั่นยาว/พัก, b3 ปรับศูนย์แล้ว) · u8 แบต (255=ไม่ทราบ) · u16 จำนวนครั้งที่เตือน</td></tr>
+<tr><td>CFG <code>…0003…</code></td><td>read/write</td><td>u8 เกณฑ์ (20–80°) , u8 โหมด (0/1)</td></tr>
+<tr><td>CMD <code>…0004…</code></td><td>write</td><td>1 ปรับศูนย์ · 2 ทดสอบสั่นสั้น · 3 ทดสอบสั่นยาว</td></tr></table>
+<h3>เว็บแอป</h3>
+<ul><li>HTML/JS ไฟล์เดียว ไม่มีเซิร์ฟเวอร์ ไม่ส่งข้อมูลออกนอกเครื่อง ข้อมูลมุมอยู่ในเบราว์เซอร์และบันทึก CSV ลงเครื่องผู้ใช้เท่านั้น</li>
+<li>ใช้ Web Bluetooth: รองรับ Chrome/Edge บนเดสก์ท็อปและ Android; Safari/iOS และ Firefox ไม่รองรับ (ตรวจจากแหล่งทุติยภูมิ เมื่อ 7 พ.ย. 2026) ต้องเปิดผ่าน HTTPS หรือ localhost และกดเชื่อมต่อด้วยมือ <a href="#r10">[10]</a></li>
+<li>มี <b>โหมดทดลอง</b> ที่รันตรรกะเดียวกับเฟิร์มแวร์กับข้อมูลจำลอง เพื่อดูผลของโหมดและ dwell โดยไม่ต้องมีอุปกรณ์</li></ul>
+<div class="btns"><a class="btn" href="app.html">เปิดแอป / โหมดทดลอง</a></div>
+<h3>สถานะซอฟต์แวร์</h3>
+<table><tr><th>ส่วน</th><th>สถานะ</th></tr>
+<tr><td>เฟิร์มแวร์โหนดเอว</td><td>คอมไพล์ผ่านสำหรับ XIAO_ESP32C3 · <b>ยังไม่ทดสอบกับบอร์ดจริง</b></td></tr>
+<tr><td>เว็บแอป</td><td>ตรวจสคริปต์ผ่าน · ทดสอบโหมดทดลองแล้ว · <b>ยังไม่ทดสอบเชื่อมกับอุปกรณ์จริง</b></td></tr>
+<tr><td>โหนดข้อมือ + ตรวจ "กำลังยก"</td><td>UNASSIGNED · ยังไม่ได้ทำ</td></tr>
+<tr><td>การวัดแบตเตอรี่</td><td>ยังไม่มีวงจรวัดบนบอร์ด รายงานเป็น "ไม่ทราบ"</td></tr></table></section>
+
+<section id="limits"><div class="tag">5 · ข้อจำกัดที่ต้องบอก</div><h2>สิ่งที่ยังไม่รู้</h2>
+<div class="grid">
+<div class="card"><h3>ก้มเฉย ๆ ก็เตือน</h3><p>โหนดเอววัดแค่มุม ไม่รู้ว่ากำลังถือของ การก้มค้างโดยไม่ยกของยังเตือนได้ ลดได้ด้วย dwell และโหมดลุกขึ้น แผนต่อไปคือให้ข้อมือตรวจการยก (ยังไม่ได้ทำ ยังไม่มีหลักฐานว่าข้อมือข้างเดียวตรวจการยกได้แม่น)</p></div>
+<div class="card"><h3>หลักฐานระยะสั้น</h3><p>งานวิจัยที่อ้างเป็นผลทันทีในห้องทดลอง ผู้เข้าร่วม 14 คนไม่ใช่คนงานจริง ไม่ได้วัดการบาดเจ็บ และไม่เห็นผลในงานผูกเหล็ก <a href="#r2">[2]</a></p></div>
+<div class="card"><h3>ความแม่นของ IMU</h3><p>IMU ตัวเดียวมีความคลาดเคลื่อนขึ้นกับงานและการติดตั้ง ต้องสอบเทียบกับระบบอ้างอิงก่อนใช้ตัวเลขจริง</p></div>
+<div class="card"><h3>ยังไม่ทดสอบกับคน</h3><p>ยังไม่มีการทดสอบการใช้งาน ความสบาย อายุแบต หรือเสียงรบกวนในไซต์งานจริง ผลทดสอบกับผู้ใช้ต้องผ่านผู้รับผิดชอบด้านความปลอดภัยก่อนนำไปใช้</p></div></div></section>
+
+<section id="refs"><div class="tag">6 · เอกสารอ้างอิง</div><h2>แหล่งที่มา และสถานะการตรวจ</h2>
+<p class="mut">ป้าย <span class="badge v-ok">อ่านฉบับเต็ม</span> = อ่านเนื้อหาเต็ม · <span class="badge v-no">อ่านบทคัดย่อ/สรุป</span> = ยังไม่ได้อ่านฉบับเต็ม ควรเปิดต้นฉบับยืนยันก่อนอ้างต่อ · ตรวจเมื่อ 6–7 พ.ย. 2026</p>
+<ol class="refs">
+<li id="r1">Ferreira ML และคณะ. Global, regional, and national burden of low back pain, 1990–2020, its attributable risk factors, and projections to 2050. <i>The Lancet Rheumatology</i> 2023;5(6):e316–e329. doi:10.1016/S2665-9913(23)00098-X <a href="https://pubmed.ncbi.nlm.nih.gov/37273833/">PubMed</a> <span class="badge v-no">อ่านบทคัดย่อ</span></li>
+<li id="r2">Lim S, Yang X. Applied Ergonomics 110 (2023) 104019 — การทดลองสัญญาณสั่นเตือนมุมก้มลำตัวในงานจำลองก่อสร้าง (NIOSH/CDC) <a href="https://doi.org/10.1016/j.apergo.2023.104019">doi</a> <span class="badge v-ok">อ่านฉบับเต็ม</span></li>
+<li id="r3">Porta และคณะ. Ergonomics — สังเกตท่าทางคนงานก่อสร้าง 15 คน ~25% ของเวลาก้ม &gt;20° <a href="https://vtechworks.lib.vt.edu/items/8de7e9bb-f761-4987-b097-09f00a22960c/full">VT</a> <span class="badge v-no">อ่านบทคัดย่อ</span></li>
+<li id="r4">van Dieën JH, Hoozemans MJM, Toussaint HM. Stoop or squat: a review of biomechanical studies on lifting technique. <i>Clinical Biomechanics</i> 1999;14(10):685–696. <a href="https://pubmed.ncbi.nlm.nih.gov/10545622/">PubMed</a> <span class="badge v-no">อ่านบทคัดย่อ/สรุป</span></li>
+<li id="r5">ทบทวนเชิงระบบ 2024 เรื่องไบโอฟีดแบ็กแบบสวมใส่ (Healthcare, 8 งาน) <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11012179/">PMC11012179</a> <span class="badge v-no">อ่านบทคัดย่อ</span></li>
+<li id="r6">Musculoskeletal disorders among Thai women in construction-related work (2014, Asia-Pacific Journal of Public Health) <a href="https://repository.li.mahidol.ac.th/handle/123456789/34399">Mahidol repository</a> <span class="badge v-no">อ่านบทคัดย่อ/สรุป</span></li>
+<li id="r7">ISO 11226 Ergonomics — Evaluation of static working postures (ตัวเลขมุม/เวลาที่เห็นมาจากสรุปรอง) <span class="badge v-no">ยังไม่ได้ตรวจกับฉบับทางการ</span></li>
+<li id="r8">Lu และ Barim (CDC/NIOSH) — การประเมินมุมลำตัวด้วย IMU ในงานยก <a href="https://stacks.cdc.gov/">CDC stacks</a> <span class="badge v-no">อ่านสรุป</span></li>
+<li id="r9">CIC Hong Kong. Waistband Enabled Construction Workers Low Back Health Monitoring System <a href="https://cic.hk/files/page/10390/CICR01_15-Waistband%20Enabled%20Construction%20Workers%20Low%20Back%20Health%20Monitoring%20System_RS026.pdf">PDF</a> <span class="badge v-no">อ่านสรุป</span></li>
+<li id="r10">Web Bluetooth browser support (web-features explorer / caniuse) <a href="https://web-platform-dx.github.io/web-features-explorer/features/web-bluetooth">ลิงก์</a> <span class="badge v-no">แหล่งทุติยภูมิ ตรวจ 7 พ.ย. 2026</span></li>
+</ol></section>
+</main>
+<footer>Lift Belt · ต้นแบบโครงงาน · เป็นเครื่องมือสร้างความตระหนักรู้ ไม่ใช่อุปกรณ์ทางการแพทย์ ไม่อ้างการป้องกันหรือวินิจฉัยโรค</footer>
+</body></html>
