@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lift Belt – อนิเมชันนำเสนอโครงงาน</title>
+<style>
+html,body{margin:0;background:#0b1017;color:#e8eef5;font-family:"Noto Sans Thai","Sarabun",system-ui,sans-serif}
+#w{max-width:1280px;margin:auto}canvas{width:100%;display:block;background:#10151c}
+.bar{display:flex;gap:8px;padding:10px;flex-wrap:wrap;align-items:center}
+button{background:#2a3645;color:#e8eef5;border:0;border-radius:8px;padding:8px 14px;font-size:15px}
+button.on{background:#4aa3ff;color:#04121f}.hint{color:#8da0b3;font-size:12px;margin-left:auto}
+</style></head><body><div id="w">
+<canvas id="c" width="1280" height="720"></canvas>
+<div class="bar"><button id="pp">⏸ หยุด</button><span id="sb"></span><button id="fs">เต็มจอ</button>
+<span class="hint">Space = เล่น/หยุด · ← → = เปลี่ยนฉาก · F = เต็มจอ</span></div></div>
+<script>
+const cv=document.getElementById('c'),g=cv.getContext('2d');
+const FONT='"Noto Sans Thai","Sarabun",system-ui,sans-serif';
+const OX=300,GY=640,S=3,THR=45,L=45,TR=55,AU=33,AF=33,BX=36,BH=34,XB=45,HY=26;
+const SC=[
+ {n:'ปัญหา',d:9,mode:'stoop',dev:false,t:'ยกของผิดท่า ปัญหาที่สะสมเงียบ ๆ',b:['ก้มหลังยกของซ้ำ ๆ เป็นปัจจัยเสี่ยงของอาการปวดหลังและโรคกล้ามเนื้อ–กระดูกจากการทำงาน','คนงานก่อสร้างยกของทั้งวัน แต่ไม่รู้ตัวว่าก้มเกินไปกี่องศา']},
+ {n:'อุปกรณ์',d:10,mode:'stand',dev:true,t:'Lift Belt: อุปกรณ์เตือนมุมก้มลำตัว',b:['โหนดเอว: คลิปติดเข็มขัด วัดมุมลำตัวด้วย IMU','โหนดข้อมือ: สั่นเตือนทันทีเมื่อก้มเกินเกณฑ์','สื่อสารกันผ่าน BLE · เกณฑ์เริ่มต้น 45° ปรับได้']},
+ {n:'ยกผิดท่า',d:16,mode:'stoop',dev:true,dial:true,t:'ก้มหลังยกของ → เกินเกณฑ์ → ข้อมือสั่นเตือน'},
+ {n:'ยกถูกท่า',d:16,mode:'squat',dev:true,dial:true,t:'ย่อเข่า หลังตรง → ไม่เกินเกณฑ์ → ไม่เตือน'},
+ {n:'สรุป',d:10,mode:'stand',dev:true,t:'สรุป',b:['รู้ตัวทันทีขณะยก → ปรับท่าเอง','ดูมุมแบบเรียลไทม์ผ่านเว็บ (Web Bluetooth)','เป็นเครื่องมือสร้างความตระหนัก ไม่ใช่อุปกรณ์ป้องกันหรือวินิจฉัยโรค · ยังไม่ได้ทดสอบกับผู้ใช้จริง']}
+];
+const CYC=8;
+let playing=true,T=0,last=performance.now(),sc=0,lt=0,warn=0,wasOver=false,evT=-9;
+const ease=x=>x<0?0:x>1?1:x*x*(3-2*x),lerp=(a,b,k)=>a+(b-a)*k,R=d=>d*Math.PI/180;
+function ik(P,Tg,l1,l2,s){const dx=Tg[0]-P[0],dy=Tg[1]-P[1],full=Math.hypot(dx,dy)||1e-3,d=Math.min(full,l1+l2-.01);
+ const a=(l1*l1-l2*l2+d*d)/(2*d),h=Math.sqrt(Math.max(0,l1*l1-a*a)),ux=dx/full,uy=dy/full;
+ const bx=P[0]+ux*a,by=P[1]+uy*a;return{j:[bx+s*h*-uy,by+s*h*ux],e:[P[0]+ux*d,P[1]+uy*d]}}
+const GRAB={stoop:{th:85,hh:78},squat:{th:38,hh:45}};
+function pose(mode,c,time){
+ let th=0,hh=90,hx=0,hand=null,carry=false,box=null;const hang=r=>[r[0]+6,r[1]-52];
+ const sh=(th,hh,hx)=>[hx+TR*Math.sin(R(th)),hh+TR*Math.cos(R(th))];
+ if(mode==='stand'){const sb=Math.sin(time*2)*.6;th=sb;hand=[6,93]}
+ else{const G=GRAB[mode],gx=XB-6-TR*Math.sin(R(G.th)),carryH=[24,100],stand=sh(0,90,0);
+  const gp=[XB,HY];
+  if(c<.3){const k=ease(c/.3);th=lerp(0,G.th,k);hh=lerp(90,G.hh,k);hx=lerp(0,gx,k);hand=[lerp(stand[0]+6,gp[0],k),lerp(stand[1]-52,gp[1],k)]}
+  else if(c<.42){th=G.th;hh=G.hh;hx=gx;hand=gp}
+  else if(c<.8){const k=ease((c-.42)/.38);th=lerp(G.th,0,k);hh=lerp(G.hh,90,k);hx=lerp(gx,0,k);hand=[lerp(gp[0],carryH[0],k),lerp(gp[1],carryH[1],k)];carry=true}
+  else{th=0;hh=90;hx=0;hand=carryH;carry=true}
+  th+=Math.sin(time*13)*.7*(c>.05&&c<.8?1:0)}
+ return{th,hh,hx,hand,carry,c}}
+const X=x=>OX+x*S,Y=y=>GY-y*S;
+function line(a,b,w,col){g.strokeStyle=col;g.lineWidth=w*S;g.lineCap='round';g.beginPath();g.moveTo(X(a[0]),Y(a[1]));g.lineTo(X(b[0]),Y(b[1]));g.stroke()}
+function dot(p,r,col){g.fillStyle=col;g.beginPath();g.arc(X(p[0]),Y(p[1]),r*S,0,7);g.fill()}
+function txt(s,x,y,sz,col,al,wt){g.font=(wt||'400')+' '+sz+'px '+FONT;g.fillStyle=col;g.textAlign=al||'left';g.fillText(s,x,y)}
+function wrap(s,x,y,w,sz,col,lh){g.font='400 '+sz+'px '+FONT;let line='',yy=y;for(const ch of s){const t=line+ch;if(g.measureText(t).width>w&&line){txt(line,x,yy,sz,col);line='';yy+=lh}line+=ch}txt(line,x,yy,sz,col);return yy+lh}
+function draw(){
+ const s=SC[sc],time=T/1000,c=(lt/1000%CYC)/CYC;
+ g.clearRect(0,0,1280,720);g.fillStyle='#10151c';g.fillRect(0,0,1280,720);
+ g.fillStyle='#1a222d';g.fillRect(0,GY,1280,80);g.fillStyle='#2f3d4f';g.fillRect(0,GY,1280,3);
+ txt(s.t,40,64,36,'#e8eef5','left','700');
+ const p=pose(s.mode,c,time),hip=[p.hx,p.hh],trunkU=[Math.sin(R(p.th)),Math.cos(R(p.th))],
+  sho=[hip[0]+TR*trunkU[0],hip[1]+TR*trunkU[1]];
+ const leg=ik(hip,[0,0],L,L,1);
+ let arm=null,hand=null;
+ if(p.hand){arm=ik(sho,p.hand,AU,AF,-1);hand=arm.e}
+ const bAlpha=s.mode==='stand'?0:(c>.92?1-(c-.92)/.08:c<.05?c/.05:1);
+ const boxC=p.carry&&hand&&c<.92?[hand[0]+BX/2,hand[1]]:[XB+BX/2,BH/2];
+ // over-threshold logic
+ const ang=Math.max(0,p.th),over=s.dev&&s.dial&&ang>THR;
+ if(over&&!wasOver){warn++;evT=time}wasOver=over;
+ const e=time-evT,buzz=over&&e<1.5&&(e%.5)<.25;
+ // box
+ if(bAlpha>0){g.globalAlpha=bAlpha;g.fillStyle='#b9854a';g.fillRect(X(boxC[0]-BX/2),Y(boxC[1]+BH/2),BX*S,BH*S);g.strokeStyle='#7a5527';g.lineWidth=3;g.strokeRect(X(boxC[0]-BX/2),Y(boxC[1]+BH/2),BX*S,BH*S);g.globalAlpha=1}
+ // body
+ const col=over?'#ff4d4f':'#ff9f1c';
+ line([-8,0],[14,0],6,'#222');
+ line(hip,leg.j,13,'#34495e');line(leg.j,[0,4],11,'#34495e');
+ line(hip,sho,18,col);
+ const head=[sho[0]+13*trunkU[0],sho[1]+13*trunkU[1]];
+ dot(head,9,'#f1c27d');g.fillStyle='#ffd23f';g.beginPath();g.arc(X(head[0]),Y(head[1]+1),9.5*S,Math.PI,0);g.fill();
+ if(arm){line(sho,arm.j,9,'#ff9f1c');line(arm.j,arm.e,8,'#f1c27d')}
+ // belt node
+ let bn=null;if(s.dev){const f=[trunkU[1],-trunkU[0]];bn=[hip[0]+trunkU[0]*3+f[0]*10,hip[1]+trunkU[1]*3+f[1]*10];
+  g.save();g.translate(X(bn[0]),Y(bn[1]));g.rotate(R(p.th));g.fillStyle='#4aa3ff';g.fillRect(-4*S,-8*S,8*S,16*S);g.fillStyle=over?'#ff4d4f':'#3ecf8e';g.fillRect(-1.5*S,-6*S,3*S,3*S);g.restore()}
+ // wrist node
+ let wn=null;if(s.dev){const base=arm?arm:{j:[hip[0]+5,hip[1]+30],e:[hip[0]+9,hip[1]-2]};
+  const a=base.j,b=base.e;wn=[lerp(a[0],b[0],.75),lerp(a[1],b[1],.75)];
+  if(!arm){wn=[sho[0]+4,sho[1]-40];}
+  const sx=buzz?(Math.random()-.5)*6:0;g.fillStyle=buzz?'#ff4d4f':'#4aa3ff';g.beginPath();g.arc(X(wn[0])+sx,Y(wn[1]),4.5*S,0,7);g.fill();
+  if(buzz){g.strokeStyle='#ff4d4f';g.lineWidth=3;for(let i=0;i<3;i++){const r=(14+((time*40+i*8)%24))*S/1.6;g.globalAlpha=1-((r/S*1.6-14)/24);g.beginPath();g.arc(X(wn[0]),Y(wn[1]),r,0,7);g.stroke()}g.globalAlpha=1}}
+ // BLE link
+ if(bn&&wn){g.strokeStyle=over?'#ff4d4f':'#4aa3ff';g.setLineDash([8,8]);g.lineWidth=2;g.beginPath();g.moveTo(X(bn[0]),Y(bn[1]));g.lineTo(X(wn[0]),Y(wn[1]));g.stroke();g.setLineDash([]);
+  const k=(time*1.2)%1;dot([lerp(bn[0],wn[0],k),lerp(bn[1],wn[1],k)],2.2,over?'#ff4d4f':'#9bd1ff');}
+ // scene extras
+ if(sc===1){const k=.5+.5*Math.sin(time*4),bp=[X(bn[0])+30,Y(bn[1])];
+  g.strokeStyle='#4aa3ff';g.lineWidth=2;g.beginPath();g.arc(X(bn[0]),Y(bn[1]),(28+6*k),0,7);g.stroke();
+  g.beginPath();g.arc(X(wn[0]),Y(wn[1]),(28+6*k),0,7);g.stroke();
+  txt('โหนดเอว',X(bn[0])+50,Y(bn[1])+70,22,'#9bd1ff','left','700');txt('โหนดข้อมือ',X(wn[0])+50,Y(wn[1])-30,22,'#9bd1ff','left','700');
+  txt('BLE',(X(bn[0])+X(wn[0]))/2-60,(Y(bn[1])+Y(wn[1]))/2,20,'#9bd1ff','right','700')}
+ // right panel
+ const px=680;
+ if(s.b){let y=170;for(const t of s.b){g.fillStyle='#4aa3ff';g.beginPath();g.arc(px,y-8,6,0,7);g.fill();y=wrap(t,px+20,y,520,26,'#e8eef5',38)+14}}
+ if(s.dial){drawDial(px+60,330,ang,over);
+  txt('ครั้งที่เตือน: '+warn,px+60,520,28,warn?'#ffb020':'#8da0b3','left','700');
+  txt(over?(buzz?'ข้อมือสั่น!':'เกิน '+THR+'° — สั่นสั้น 3 พัลส์'):sc===3?'อยู่ในเกณฑ์':'ท่ายืน/ยังไม่เกินเกณฑ์',px+60,565,24,over?'#ff4d4f':'#3ecf8e','left','700');
+  txt('เกณฑ์เตือนเริ่มต้น '+THR+'° (ปรับได้)',px+60,605,18,'#8da0b3');}
+ // progress
+ const tot=SC.reduce((a,b)=>a+b.d,0);let acc=0;
+ SC.forEach((q,i)=>{const w=1200*q.d/tot;g.fillStyle=i===sc?'#2a3645':'#1a222d';g.fillRect(40+acc*1200/tot,690,w-4,6);if(i===sc){g.fillStyle='#4aa3ff';g.fillRect(40+acc*1200/tot,690,(w-4)*lt/1000/q.d,6)}acc+=q.d});
+}
+function drawDial(cx,cy,a,over){const r=130;g.lineWidth=22;g.lineCap='butt';
+ const A=d=>Math.PI+R(d/90*180);
+ g.strokeStyle='#3ecf8e';g.beginPath();g.arc(cx+r,cy,r,A(0),A(THR));g.stroke();
+ g.strokeStyle='#ff4d4f';g.beginPath();g.arc(cx+r,cy,r,A(THR),A(90));g.stroke();
+ const na=A(Math.min(90,a));g.strokeStyle='#e8eef5';g.lineWidth=5;g.lineCap='round';g.beginPath();g.moveTo(cx+r,cy);g.lineTo(cx+r+Math.cos(na)*(r-14),cy+Math.sin(na)*(r-14));g.stroke();
+ txt(a.toFixed(0)+'°',cx+r,cy+78,64,over?'#ff4d4f':'#3ecf8e','center','700');txt('มุมก้มลำตัว',cx+r,cy+108,20,'#8da0b3','center')}
+function setScene(i){sc=(i+SC.length)%SC.length;lt=0;warn=0;wasOver=false;evT=-9;btns()}
+function btns(){const b=document.getElementById('sb');b.innerHTML='';SC.forEach((q,i)=>{const x=document.createElement('button');x.textContent=(i+1)+'. '+q.n;if(i===sc)x.className='on';x.onclick=()=>setScene(i);b.appendChild(x)})}
+function tick(n){const dt=Math.min(100,n-last);last=n;if(playing){T+=dt;lt+=dt;if(lt>=SC[sc].d*1000)setScene(sc+1)}try{draw()}catch(err){document.title='ERR '+err.message+' '+(err.stack||'').split('\n')[1];console.error(err);g.fillStyle='#f55';g.font='16px sans-serif';g.fillText('ERR '+err.message+' | '+(err.stack||'').split('\n')[1],20,300)}requestAnimationFrame(tick)}
+document.getElementById('pp').onclick=()=>{playing=!playing;document.getElementById('pp').textContent=playing?'⏸ หยุด':'▶ เล่น'};
+document.getElementById('fs').onclick=()=>document.getElementById('w').requestFullscreen&&document.getElementById('w').requestFullscreen();
+addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();document.getElementById('pp').click()}else if(e.key==='ArrowRight')setScene(sc+1);else if(e.key==='ArrowLeft')setScene(sc-1);else if(e.key==='f'||e.key==='F')document.getElementById('fs').click()});
+btns();const H=new URLSearchParams(location.hash.slice(1));if(H.has('s')){setScene(+H.get('s'));lt=+H.get('t')||0;T=lt;playing=false}
+requestAnimationFrame(tick);
+</script></body></html>
